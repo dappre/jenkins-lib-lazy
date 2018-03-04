@@ -44,7 +44,7 @@ def stepDocker(name, config, dist, args = '', tasks = [ 'inside.sh' ]) {
 		// Run each shell scripts as task inside the Docker
 		imgDocker.inside(args) {
 			ansiColor('xterm') {
-				withEnv(["DIST=\'${dist}\'"]) {
+				withEnv(["DIST=${dist}"]) {
 					shTasks.each { shTask ->
 						sh "${config.sdir}/${name}/${shTask}"
 					}
