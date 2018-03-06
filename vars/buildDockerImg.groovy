@@ -58,10 +58,12 @@ def call(name, config, dist, filename = 'Dockerfile') {
 	def uid = sh(returnStdout: true, script: 'id -u').trim()
 	def gid = sh(returnStdout: true, script: 'id -g').trim()
 	
-	withEnv(["UID=${uid}", "GID=${gid}"]) {
-		return docker.build(
-			"${config.name}-${name}-${dist}:${config.branch}",
-			"--build-arg dir=${name} --build-arg uid=${env.UID} --build-arg gid=${env.GID} -f ${config.sdir}/${dstDockerfile} ${config.sdir}"
-		)
+	ansiColor('xterm') {
+		withEnv(["UID=${uid}", "GID=${gid}"]) {
+			return docker.build(
+				"${config.name}-${name}-${dist}:${config.branch}",
+				"--build-arg dir=${name} --build-arg uid=${env.UID} --build-arg gid=${env.GID} -f ${config.sdir}/${dstDockerfile} ${config.sdir}"
+			)
+		}
 	}
 }
