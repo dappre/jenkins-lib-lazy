@@ -38,7 +38,7 @@ def stepDocker(name, config, dist, args = '', tasks = [ 'inside.sh' ]) {
 			}
 		}
 
-		// Build the relavent Docker image
+		// Build the relevant Docker image
 		def imgDocker = buildDockerImg(name, config, dist)
 
 		// Run each shell scripts as task inside the Docker

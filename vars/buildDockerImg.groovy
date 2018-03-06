@@ -53,5 +53,15 @@ def call(name, config, dist, filename = 'Dockerfile') {
 		)
 	}
 
-	return docker.build("${config.name}-${name}-${dist}:${config.branch}", "--build-arg dir=${name} -f ${config.sdir}/${dstDockerfile} ${config.sdir}")
+	// Get uid of current UID and GID to build docker image
+	// This will allow Jenkins to manipulate content generated within Docker
+	def uid = sh(returnStdout: true, script: 'id -u').trim()
+	def gid = sh(returnStdout: true, script: 'id -g').trim()
+	
+	withEnv(["UID=${uid}", "GID=${gid}"]) {
+		return docker.build(
+			"${config.name}-${name}-${dist}:${config.branch}",
+			"--build-arg dir=${name} --build-arg uid=${env.UID} --build-arg gid=${env.GID} -f ${config.sdir}/${dstDockerfile} ${config.sdir}"
+		)
+	}
 }
