@@ -22,13 +22,18 @@
 import org.jenkins.ci.lazy.plConfig
 
 // Step for Linux distribution on Docker
-def stepDocker(name, config, dist, args = '', tasks = [ 'inside.sh' ]) {
+def stepDocker(name, config, dist, args = '', tasks = [ 'inside.sh' ], pre = null, post = null) {
 	if (config.verbose) echo "Docker step ${name} on ${dist}: Startup"
 
 	// Checkout the source
 	checkout scm
 
 	try {
+		// Execute post closure before cleanup
+		if (pre) {
+			pre()
+		}
+
 		// Prepare all shell scripts in workspace to be run later
 		def shTasks = prepareShTasks(name, config, dist, tasks)
 		if (config.verbose) {
@@ -38,18 +43,23 @@ def stepDocker(name, config, dist, args = '', tasks = [ 'inside.sh' ]) {
 			}
 		}
 
-		// Build the relavent Docker image
+		// Build the relevant Docker image
 		def imgDocker = buildDockerImg(name, config, dist)
 
 		// Run each shell scripts as task inside the Docker
 		imgDocker.inside(args) {
 			ansiColor('xterm') {
-				withEnv(["DIST=\'${dist}\'"]) {
+				withEnv(["DIST=${dist}"]) {
 					shTasks.each { shTask ->
 						sh "${config.sdir}/${name}/${shTask}"
 					}
 				}
 			}
+		}
+
+		// Execute post closure before cleanup
+		if (post) {
+			post()
 		}
 	} finally {
 		if (config.verbose) echo "Docker step ${name} on ${dist}: Cleanup"
@@ -58,7 +68,7 @@ def stepDocker(name, config, dist, args = '', tasks = [ 'inside.sh' ]) {
 }
 
 // Generates a Map of nodes to execute one Docker step for each distribution
-Map distNode(name, config, args = '', tasks = [ 'inside.sh' ]) {
+Map distNode(name, config, args = '', tasks = [ 'inside.sh' ], pre = null, post = null) {
 	Map mDists = [:]
 
 	config.dists.each { dist ->
@@ -66,7 +76,7 @@ Map distNode(name, config, args = '', tasks = [ 'inside.sh' ]) {
 		mDists += [
 			(dist): {
 				node(label: config.labels.docker) {
-					stepDocker(name, config, dist, args, tasks)
+					stepDocker(name, config, dist, args, tasks, pre, post)
 				}
 			}
 		]
@@ -76,11 +86,11 @@ Map distNode(name, config, args = '', tasks = [ 'inside.sh' ]) {
 }
 
 // Default method to run shell tasks in parallel Docker containers
-def call(name, config, args = '', tasks = [ 'inside.sh' ]) {
+def call(name, config, args = '', tasks = [ 'inside.sh' ], pre = null, post = null) {
 	if (config.stages.contains(name)) {
 		stage(Character.toUpperCase(name.charAt(0)).toString() + name.substring(1)) {
 			if (config.verbose) echo "Stage ${name} for ${config.name} begins here"
-			parallel(distNode(name, config, args, tasks))
+			parallel(distNode(name, config, args, tasks, pre, post))
 			if (config.verbose) echo "Stage ${name} for ${config.name} ends here"
 		}
 	} else {
