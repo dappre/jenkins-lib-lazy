@@ -42,7 +42,8 @@ class plConfig implements Serializable {
 	protected Integer verbose	= 1
 	protected String branch		= 'master'
 
-	public plConfig(String n, String d, Map p, String b) {
+	
+	public plConfig(String n = null, String d = null, Map p, String b = null) {
 		name		= n
 		sdir		= d
 		extended 	= extended
@@ -53,6 +54,14 @@ class plConfig implements Serializable {
 		];
 		verbose		= p.verbose as Integer
 		flags		= p.listFlags.split("\n")
+		if (b) {
+			branch		= b
+		}
+	}
+
+	public update(String n, String d, Map p, String b = null) {
+		name		= n
+		sdir		= d
 		if (b) {
 			branch		= b
 		}

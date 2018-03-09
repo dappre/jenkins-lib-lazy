@@ -22,18 +22,31 @@
 import org.jenkins.ci.lazy.plConfig
 
 // Function to copy shell scripts from lib to workspace if needed
-def call(name, config, dist, tasks = [ 'main.sh' ]) {
+def call(body) {
+	params = [
+		name:	null,
+		config:	null,
+		dist:	null,
+		tasks:	[ 'main.sh' ],
+	]
+	body.resolveStrategy = Closure.DELEGATE_FIRST
+	body.delegate = params
+	body()
+
+	def config = lazyConfig()
+	echo "Config from prepareShTasks = ${config}"
+
 	def shTasksLst = []
 
 	// Enter sub-folder where Dockerfiles and scripts are located
-	dir("${config.sdir}/${name}") {
-		tasks.each { shTask ->
+	dir("${params.config.sdir}/${params.name}") {
+		params.tasks.each { shTask ->
 			def dstShTask = "${shTask}"	// Default main script location
 			// Lookup fo the relevant main script in sub workspace first
 			// TODO: Rework to use fileExists?
 			def srcShTask = sh(
 				returnStdout: true,
-				script: "ls -1 ${dist}.${shTask} 2> /dev/null || ls -1 ${shTask} 2> /dev/null || echo"
+				script: "ls -1 ${params.dist}.${shTask} 2> /dev/null || ls -1 ${shTask} 2> /dev/null || echo"
 			).trim()
 
 			if (srcShTask != null && srcShTask != '') {
@@ -43,9 +56,9 @@ def call(name, config, dist, tasks = [ 'main.sh' ]) {
 				// Extract main script from shared lib
 				def contentShTask = ''
 				try {
-					contentShTask = libraryResource("${config.sdir}/${name}/${dist}.${shTask}")
+					contentShTask = libraryResource("${params.config.sdir}/${params.name}/${params.dist}.${shTask}")
 				} catch (hudson.AbortException e) {
-					contentShTask = libraryResource("${config.sdir}/${name}/${shTask}")
+					contentShTask = libraryResource("${params.config.sdir}/${params.name}/${shTask}")
 				}
 
 				// Write the selected Dockerfile to workspace sub-folder

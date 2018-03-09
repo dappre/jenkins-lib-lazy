@@ -19,10 +19,12 @@
  * limitations under the License.
  */
 
+import org.jenkins.ci.lazy.plConfig
+
 def call (body) {
 	def params = [
-		name:		null,
 		config:		null,
+		name:		null,
 		tasks:		[],
 		dockerArgs:	'',
 	]
@@ -30,7 +32,13 @@ def call (body) {
 	body.delegate = params
 	body()
 
+	def config = lazyConfig()
+	echo "Config from lazyStage = ${config}"
+	
 	def err = null
+	if (!params.config) {
+		err = 'No config found. Initialize first!'
+	}
 	if (!params.name) {
 		err = 'Stage always needs a name'
 	} else if (!params.tasks) {
@@ -55,6 +63,9 @@ def call (body) {
 			// Execute steps inside or outside dists
 			dists.each { dist ->
 				node('master') {
+					// Checkout the source
+					checkout scm
+					
 					// Collect steps to be executed
 					def steps = []
 					if (task.exec instanceof Closure) {
@@ -64,16 +75,27 @@ def call (body) {
 						// Prepare shell scripts from list or string
 						def shTasks = null
 						if (task.exec instanceof List) {
-							shTasks = prepareShTasks(params.name, params.config, dist, task.exec)
+							shTasks = prepareShTasks {
+								name	= params.name
+								config	= params.config
+								dist	= params.dist
+								tasks	= task.exec
+							}
 						} else if (task.exec instanceof String) {
-							shTasks = prepareShTasks(params.name, params.config, dist, [ task.exec ])
+							shTasks = prepareShTasks
+							shTasks = prepareShTasks {
+								name	= params.name
+								config	= params.config
+								dist	= params.dist
+								tasks	= [ task.exec ]
+							}
 						} else {
 							// Give up if not a Closure, not a List and not a String!
 							error "No idea what to do with ${task.exec}"
 						}
 						// Collect all shel steps
 						shTasks.each { shTask ->
-							steps += { sh shTask }
+							steps += { sh "${params.config.sdir}/${params.name}/${shTask}" }
 						}
 					}
 
