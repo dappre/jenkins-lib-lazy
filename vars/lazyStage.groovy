@@ -21,17 +21,37 @@ def call (body) {
 		error err
 	}
 
-	params.tasks.each { t ->
-		if (t.body instanceof Closure) {
-			t.body.call()
-		} else if (t.body instanceof List) {
-			t.body.each { st ->
-				echo "Need to do ${st}"
-			}
-		} else if (t.body instanceof String) {
-			echo "Need to do ${t.body}"
+	params.tasks.each { task ->
+		// Prepare dists to be used for this task bloc
+		def dists = []
+		if (task.on == '*') {
+			// TODO: populate from config 
+			dists = [ 'all', 'dist', 'available', ]
 		} else {
-			error "No idea what to do with ${t.body}"
+			dists += task.on
+		}
+
+		// Collect steps to be executed
+		def steps = []
+		if (task.exec instanceof Closure) {
+			steps += task.exec
+		} else if (task.exec instanceof List) {
+			task.exec.each { subtask ->
+				steps += { sh name + '/' + subtask.exec }
+			}
+		} else if (task.exec instanceof String) {
+			steps += { sh params.name + '/' + task.exec }
+		} else {
+			error "No idea what to do with ${task.exec}"
+		}
+
+		// Execute steps inside or outside dists
+		dists.each { dist ->
+			echo "Need to exec the following steps inside (${dist})"
+			steps.each { step ->
+				step()
+			}
+			echo "Done"
 		}
 	}
 }
