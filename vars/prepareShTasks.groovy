@@ -1,4 +1,4 @@
-#!groovyy
+#!groovy
 
 /*
  * This work is protected under copyright law in the Kingdom of
