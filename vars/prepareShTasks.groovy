@@ -19,13 +19,10 @@
  * limitations under the License.
  */
 
-import org.jenkins.ci.lazy.plConfig
-
 // Function to copy shell scripts from lib to workspace if needed
 def call(body) {
 	params = [
 		name:	null,
-		config:	null,
 		dist:	null,
 		tasks:	[ 'main.sh' ],
 	]
@@ -34,12 +31,11 @@ def call(body) {
 	body()
 
 	def config = lazyConfig()
-	echo "Config from prepareShTasks = ${config}"
 
 	def shTasksLst = []
 
 	// Enter sub-folder where Dockerfiles and scripts are located
-	dir("${params.config.sdir}/${params.name}") {
+	dir("${config.sdir}/${params.name}") {
 		params.tasks.each { shTask ->
 			def dstShTask = "${shTask}"	// Default main script location
 			// Lookup fo the relevant main script in sub workspace first
@@ -56,9 +52,9 @@ def call(body) {
 				// Extract main script from shared lib
 				def contentShTask = ''
 				try {
-					contentShTask = libraryResource("${params.config.sdir}/${params.name}/${params.dist}.${shTask}")
+					contentShTask = libraryResource("${config.sdir}/${params.name}/${params.dist}.${shTask}")
 				} catch (hudson.AbortException e) {
-					contentShTask = libraryResource("${params.config.sdir}/${params.name}/${shTask}")
+					contentShTask = libraryResource("${config.sdir}/${params.name}/${shTask}")
 				}
 
 				// Write the selected Dockerfile to workspace sub-folder

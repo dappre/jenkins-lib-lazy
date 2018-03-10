@@ -19,9 +19,7 @@
  * limitations under the License.
  */
 
-import org.jenkins.ci.lazy.plConfig
 import groovy.transform.Field
-@Field private static config = new plConfig()
 @Field public static Map config = [:]
 
 // Default method
@@ -75,8 +73,21 @@ def call(String name = env.JOB_NAME, String sdir = 'lazy-ci') {
 		])
 	
 		// Instanciate a configuration object based on the parameters
-		config.update(name, sdir, params, env.BRANCH_NAME)
-	
+		//config.update(name, sdir, params, env.BRANCH_NAME)
+		config.putAll([
+			name		: name,
+			sdir		: sdir,
+			extended 	: true,
+			dists		: params.listDists.split("\n"),
+			stages		: params.listStages.split("\n"),
+			labels		: [
+				docker:		params.labelDocker,
+			],
+			verbose		: params.verbose as Integer,
+			flags		: params.listFlags.split("\n"),
+			branch		: env.BRANCH_NAME,
+		])
+
 		// Load Extended library if available and update configuration accordingly
 		echo 'Trying to load Extended library...'
 		try {

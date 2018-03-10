@@ -19,11 +19,8 @@
  * limitations under the License.
  */
 
-import org.jenkins.ci.lazy.plConfig
-
 def call (body) {
 	def params = [
-		config:		null,
 		name:		null,
 		tasks:		[],
 		dockerArgs:	'',
@@ -33,12 +30,8 @@ def call (body) {
 	body()
 
 	def config = lazyConfig()
-	echo "Config from lazyStage = ${config}"
 	
 	def err = null
-	if (!params.config) {
-		err = 'No config found. Initialize first!'
-	}
 	if (!params.name) {
 		err = 'Stage always needs a name'
 	} else if (!params.tasks) {
@@ -54,8 +47,7 @@ def call (body) {
 			// Prepare dists to be used for this task bloc
 			def dists = []
 			if (task.on == '*') {
-				// TODO: populate from config 
-				dists = [ 'all', 'dist', 'available', ]
+				dists = config.dists
 			} else {
 				dists += task.on
 			}
@@ -77,7 +69,6 @@ def call (body) {
 						if (task.exec instanceof List) {
 							shTasks = prepareShTasks {
 								name	= params.name
-								config	= params.config
 								dist	= params.dist
 								tasks	= task.exec
 							}
@@ -85,7 +76,6 @@ def call (body) {
 							shTasks = prepareShTasks
 							shTasks = prepareShTasks {
 								name	= params.name
-								config	= params.config
 								dist	= params.dist
 								tasks	= [ task.exec ]
 							}
@@ -95,7 +85,7 @@ def call (body) {
 						}
 						// Collect all shel steps
 						shTasks.each { shTask ->
-							steps += { sh "${params.config.sdir}/${params.name}/${shTask}" }
+							steps += { sh "${config.sdir}/${params.name}/${shTask}" }
 						}
 					}
 
