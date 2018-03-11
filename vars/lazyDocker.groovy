@@ -76,8 +76,11 @@ def call (stage, task, dist, args = '') {
 	if (config.verbose) echo "Docker step for stage ${stage} inside ${dist}: started"
 
 	// Execute pre closure first
-	if (task.preout) task.preout()
+	if (task.preout) task.preout.call()
 
+	// Prepare steps without executing
+	def steps = lazyStep(stage, task.exec, dist)
+	
 	// Build the relevant Docker image
 	def imgDocker = buildImage(stage, dist)
 
@@ -85,13 +88,16 @@ def call (stage, task, dist, args = '') {
 	imgDocker.inside(args) {
 		ansiColor('xterm') {
 			withEnv(["DIST=${dist}"]) {
-				lazyShell(stage, task, dist)
+				// Execut each step
+				steps.each { step ->
+					step()
+				}
 			}
 		}
 	}
 
 	// Execute post closure at the end
-	if (task.postout) task.postout()
+	if (task.postout) task.postout.call()
 
 	if (config.verbose) echo "Docker step for stage ${stage} inside ${dist}: finished"
 }

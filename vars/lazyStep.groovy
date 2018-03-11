@@ -20,7 +20,7 @@
  */
 
 // Function to prepare and list shell scripts (copy from lib to workspace if needed)
-def listScripts(stage, scripts, target)
+def listScripts(stage, scripts, target) {
 	// Retrieving global config
 	def config = lazyConfig()
 
@@ -74,39 +74,40 @@ def listScripts(stage, scripts, target)
 	return scriptsLst
 }
 
-// Parse task as Closure of (list of) String and execute directly or using shell step(s)
+// Parse task as Closure of (list of) String and return a List of step(s)
 def call (stage, task, target) {
 	// Retrieving global config
 	def config = lazyConfig()
 
-	// Checkout the source
-	checkout scm
-
 	// Collect steps to be executed
 	def steps = []
-	if (task.exec instanceof Closure) {
+	if (task instanceof Closure) {
+		if (config.verbose > 2) echo "Task is a Closure (${task})"
 		// If task is a Closure, just add it in the step list
-		steps += task.exec
+		steps += task
 	} else {
 		// Prepare shell scripts from (list of) String
-		def scripts = null
-		if (task.exec instanceof List) {
-			scripts = listScript(stage, task.exec, target)
-		} else if (task.exec instanceof String) {
-			scripts = listScript(stage, [ task.exec ], target)
+		def scripts = []
+		if (task instanceof List) {
+			if (config.verbose > 2) echo "Task is a List (${task})"
+			scripts = listScripts(stage, task, target)
+		} else if (task instanceof String) {
+			if (config.verbose > 2) echo "Task is a String (${task})"
+			scripts = listScripts(stage, [ task ], target)
 		} else {
 			// Give up if not a Closure, not a List and not a String!
-			error "No idea what to do with ${task.exec}"
+			error "No idea what to do with ${task}".toString()
 		}
 
 		// Collect all scripts as shell steps
+		if (config.verbose > 2) echo "Task was referring to {scripts.size()} scripts (${scripts})"
 		scripts.each { script ->
 			steps += { sh "${config.sdir}/${stage}/${script}" }
 		}
 	}
 
 	// Execute each collected steps
-	steps.each { step ->
-		step()
-	}
+	if (config.verbose > 2) echo "Task has been converted in {steps.size()} steps (${steps})"
+	
+	return steps
 }

@@ -24,7 +24,7 @@ import groovy.transform.Field
 
 // Default method
 def call(String name = env.JOB_NAME, String sdir = 'lazy-ci') {
-	echo "Config from lazyConfig = ${config}"
+	if (config && config.verbose > 1) echo "Config from lazyConfig = ${config}"
 
 	if (!config) {
 		def distsDef = []
@@ -90,7 +90,7 @@ def call(String name = env.JOB_NAME, String sdir = 'lazy-ci') {
 		])
 
 		// Load Extended library if available and update configuration accordingly
-		echo 'Trying to load Extended library...'
+		if (config.verbose) echo 'Trying to load Extended library...'
 		try {
 			library(
 					identifier: "libExt@${params.libExtBranch}",
@@ -100,10 +100,10 @@ def call(String name = env.JOB_NAME, String sdir = 'lazy-ci') {
 						credentialsId: params.libExtCredId
 					])
 					)
-			echo 'Extended shared library loaded: extended features are supported'
+			if (config.verbose) echo 'Extended shared library loaded: extended features are supported'
 		} catch (error) {
-			echo 'Extended shared library could NOT be loaded: extended features are disabled'
-			if(config.verbose) {
+			if (config.verbose) echo 'Extended shared library could NOT be loaded: extended features are disabled'
+			if(config.verbose > 1) {
 				echo "Warning message:\n${error.message}"
 			}
 			config.extended = false

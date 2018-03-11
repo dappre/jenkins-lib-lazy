@@ -52,8 +52,8 @@ def call (body) {
 	stage(Character.toUpperCase(params.name.charAt(0)).toString() + params.name.substring(1)) {
 		if (config.verbose) echo "Stage ${params.name} for ${config.name} begins here"
 
-		// Collect all tasks in a List of Closure blocs to be run in parallel
-		def blocks = [:]
+		// Collect all tasks in a Map of pipeline branches (as Closure) to be run in parallel
+		def branches = [:]
 		def index = 1
 
 		params.tasks.each { task ->
@@ -65,37 +65,51 @@ def call (body) {
 				label = config.labels.docker
 			}
 
-			// Prepare list of dists to be used for this task bloc
+			// Prepare List of dists to be used for this task block
 			def dists = []
 			if (task.inside == '*') {
 				dists = config.dists
-			} else {
-				dists += task.inside
+			} else if (task.inside) {
+				dists = task.inside
 			}
 
 			if (dists) {
-				// If inside docker, keeps adding each dist as a new bloc
+				// If inside docker, keeps adding each dist as a new block
 				dists.each { dist ->
 					if (config.verbose) echo "Stage ${params.name} inside ${dist} will be done using Docker (label = ${config.labels.docker})"
-					def branch = "${index++}_${dist}"
-					blocks += [
+					def branch = "${params.name}_${index++}_${dist}"
+					branches += [
 						(branch): {
 							node(label: config.labels.docker) {
 								checkout scm
-								lazyDocker(params.name, task, dist, params.dockerArgs)
-								cleanWs
+								try {
+									lazyDocker(params.name, task, dist, params.dockerArgs)
+								} catch (e) {
+									error e.toString()
+								} finally {
+									step([$class: 'WsCleanup'])
+								}
 							}
 						}
 					]
 				}
 			} else {
-				def branch = "${index++}_${task.on}"
-				blocks += [
+				// If not, just add the block
+				def branch = "${params.name}_${index++}_${task.on}"
+				branches += [
 					(branch): {
 						node(label: config.labels.default) {
 							checkout scm
-							lazyStep(params.name, task, task.on)
-							cleanWs
+							try {
+								// Execute each steps
+								lazyStep(params.name, task.exec, task.on).each { step ->
+									step ()
+								}
+							} catch (e) {
+								error e.toString()
+							} finally {
+								step([$class: 'WsCleanup'])
+							}
 						}
 					}
 				]
@@ -103,7 +117,7 @@ def call (body) {
 		}
 
 		// Now we can execute block(s) in parallel
-		parallel(blocks)
+		parallel(branches)
 		
 		if (config.verbose) echo "Stage ${params.name} for ${config.name} ends here"
 	}
