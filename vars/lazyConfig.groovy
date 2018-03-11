@@ -82,6 +82,7 @@ def call(String name = env.JOB_NAME, String sdir = 'lazy-ci') {
 			stages		: params.listStages.split("\n"),
 			labels		: [
 				docker:		params.labelDocker,
+				default:	'master',
 			],
 			verbose		: params.verbose as Integer,
 			flags		: params.listFlags.split("\n"),

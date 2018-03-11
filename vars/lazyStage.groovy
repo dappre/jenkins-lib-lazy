@@ -29,73 +29,82 @@ def call (body) {
 	body.delegate = params
 	body()
 
+	// Retrieving global config
 	def config = lazyConfig()
-	
+
+	// Check parameters and config for possible error
 	def err = null
 	if (!params.name) {
 		err = 'Stage always needs a name'
 	} else if (!params.tasks) {
 		err = 'Stage always needs some tasks'
 	}
-
 	if (err) {
 		error err
 	}
 
+	// Skip stage if not listed in the config
+	if (!config.stages.contains(params.name)) {
+		echo "Stage ${params.name} will be skipped (config.stages.${params.name} is not set)"
+		return 0
+	}
+
 	stage(Character.toUpperCase(params.name.charAt(0)).toString() + params.name.substring(1)) {
+		if (config.verbose) echo "Stage ${params.name} for ${config.name} begins here"
+
+		// Collect all tasks in a List of Closure blocs to be run in parallel
+		def blocks = [:]
+		def index = 1
+
 		params.tasks.each { task ->
-			// Prepare dists to be used for this task bloc
+			// Lookup node label to be used for this task bloc
+			def label = config.labels.default
+			if (task.on) {
+				label = config.labels[task.on]
+			} else if (task.inside) {
+				label = config.labels.docker
+			}
+
+			// Prepare list of dists to be used for this task bloc
 			def dists = []
-			if (task.on == '*') {
+			if (task.inside == '*') {
 				dists = config.dists
 			} else {
-				dists += task.on
+				dists += task.inside
 			}
-	
-			// Execute steps inside or outside dists
-			dists.each { dist ->
-				node('master') {
-					// Checkout the source
-					checkout scm
-					
-					// Collect steps to be executed
-					def steps = []
-					if (task.exec instanceof Closure) {
-						// If task is a Closuer, just add it in the step list
-						steps += task.exec
-					} else {
-						// Prepare shell scripts from list or string
-						def shTasks = null
-						if (task.exec instanceof List) {
-							shTasks = prepareShTasks {
-								name	= params.name
-								dist	= params.dist
-								tasks	= task.exec
-							}
-						} else if (task.exec instanceof String) {
-							shTasks = prepareShTasks
-							shTasks = prepareShTasks {
-								name	= params.name
-								dist	= params.dist
-								tasks	= [ task.exec ]
-							}
-						} else {
-							// Give up if not a Closure, not a List and not a String!
-							error "No idea what to do with ${task.exec}"
-						}
-						// Collect all shel steps
-						shTasks.each { shTask ->
-							steps += { sh "${config.sdir}/${params.name}/${shTask}" }
-						}
-					}
 
-					echo "Need to exec the following steps inside (${dist})"
-					steps.each { step ->
-						step()
-					}
-					echo "Done"
+			if (dists) {
+				// If inside docker, keeps adding each dist as a new bloc
+				dists.each { dist ->
+					if (config.verbose) echo "Stage ${params.name} inside ${dist} will be done using Docker (label = ${config.labels.docker})"
+					def branch = "${index++}_${dist}"
+					blocks += [
+						(branch): {
+							node(label: config.labels.docker) {
+								checkout scm
+								lazyDocker(params.name, task, dist, params.dockerArgs)
+								cleanWs
+							}
+						}
+					]
 				}
+			} else {
+				def branch = "${index++}_${task.on}"
+				blocks += [
+					(branch): {
+						node(label: config.labels.default) {
+							checkout scm
+							lazyStep(params.name, task, task.on)
+							cleanWs
+						}
+					}
+				]
 			}
 		}
+
+		// Now we can execute block(s) in parallel
+		parallel(blocks)
+		
+		if (config.verbose) echo "Stage ${params.name} for ${config.name} ends here"
 	}
 }
