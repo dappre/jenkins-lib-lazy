@@ -19,18 +19,19 @@
  * limitations under the License.
  */
 
-import org.jenkins.ci.lazy.plConfig
-
 // Function to copy Dockerfile from lib to workspace if needed and build the image
-def call(name, config, dist, filename = 'Dockerfile') {
-	def dstDockerfile = "./${name}/${filename}"
+def buildImage(stage, dist, args = '', filename = 'Dockerfile') {
+	// Retrieving global config
+	def config = lazyConfig()
+
+	def dstDockerfile = "./${stage}/${filename}"
 
 	// Enter sub-folder where Dockerfiles and scripts are located
 	dir(config.sdir) {
 		// Lookup fo the relevant Dockerfile in sub workspace first
 		def srcDockerfile = sh(
 			returnStdout: true,
-			script: "ls -1 ${name}/${dist}.Dockerfile 2> /dev/null || ls -1 ${dist}.Dockerfile 2> /dev/null || echo"
+			script: "ls -1 ${stage}/${dist}.Dockerfile 2> /dev/null || ls -1 ${dist}.Dockerfile 2> /dev/null || echo"
 		).trim()
 
 		def contentDockerfile = ''
@@ -40,7 +41,7 @@ def call(name, config, dist, filename = 'Dockerfile') {
 		} else {
 			// Extract Dockerfile from shared lib
 			try {
-				contentDockerfile = libraryResource("${config.sdir}/${name}/${dist}.Dockerfile")
+				contentDockerfile = libraryResource("${config.sdir}/${stage}/${dist}.Dockerfile")
 			} catch (hudson.AbortException e) {
 				contentDockerfile = libraryResource("${config.sdir}/${dist}.Dockerfile")
 			}
@@ -61,9 +62,42 @@ def call(name, config, dist, filename = 'Dockerfile') {
 	ansiColor('xterm') {
 		withEnv(["UID=${uid}", "GID=${gid}"]) {
 			return docker.build(
-				"${config.name}-${name}-${dist}:${config.branch}",
-				"--build-arg dir=${name} --build-arg uid=${env.UID} --build-arg gid=${env.GID} -f ${config.sdir}/${dstDockerfile} ${config.sdir}"
+				"${config.name}-${stage}-${dist}:${config.branch}",
+				"--build-arg dir=${stage} --build-arg uid=${env.UID} --build-arg gid=${env.GID} -f ${config.sdir}/${dstDockerfile} ${config.sdir}"
 			)
 		}
 	}
+}
+
+def call (stage, task, dist, args = '') {
+	// Retrieving global config
+	def config = lazyConfig()
+
+	if (config.verbose) echo "Docker step for stage ${stage} inside ${dist}: started"
+
+	// Execute pre closure first
+	if (task.preout) task.preout.call()
+
+	// Prepare steps without executing
+	def steps = lazyStep(stage, task.exec, dist)
+	
+	// Build the relevant Docker image
+	def imgDocker = buildImage(stage, dist)
+
+	// Run each shell scripts as task inside the Docker
+	imgDocker.inside(args) {
+		ansiColor('xterm') {
+			withEnv(["DIST=${dist}"]) {
+				// Execut each step
+				steps.each { step ->
+					step()
+				}
+			}
+		}
+	}
+
+	// Execute post closure at the end
+	if (task.postout) task.postout.call()
+
+	if (config.verbose) echo "Docker step for stage ${stage} inside ${dist}: finished"
 }
