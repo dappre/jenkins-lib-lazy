@@ -82,6 +82,9 @@ def call (body) {
 			if (dists) {
 				// If inside docker, keeps adding each dist as a new branch block
 				dists.each { dist ->
+					if (!config.labels['docker']) {
+						error "Can not find any label value for key = docker"
+					}
 					if (config.verbose) echo "Stage ${params.name} inside ${dist} will be done on agent with label = ${config.labels.docker}"
 					def branch = "${params.name}_${index++}_${dist}"
 					branches += [
@@ -102,6 +105,9 @@ def call (body) {
 			} else {
 				// If not, just add the branch block
 				def target = task.on ? task.on : 'default'
+				if (!config.labels[target]) {
+					error "Can not find any node with label = ${target}"
+				}
 				if (config.verbose) echo "Stage ${params.name} on ${target} will be done on agent with label = ${config.labels[target]}"
 				def branch = "${params.name}_${index++}_${target}"
 				branches += [

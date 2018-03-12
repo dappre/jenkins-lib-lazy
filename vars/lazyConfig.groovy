@@ -22,6 +22,18 @@
 import groovy.transform.Field
 @Field public static Map config = [:]
 
+def mapFromText(String text) {
+	// Convert labels List from parameters back to Map in config
+	Map map = [:]
+	text.findAll(/([^=\n]+)=([^\n]+)/) { group ->
+		// REM: In Groovy console, the Closure parameters are 'full, key, value ->'
+		def key = group[1]
+		def value = group[2]
+		map[key] = value
+	}
+	return map
+}
+
 // Default method
 def call(Map args = [:]) {
 	if (config && config.verbose > 1) echo "Config from lazyConfig = ${config}"
@@ -30,11 +42,11 @@ def call(Map args = [:]) {
 		// Override default arguments
 		args = [
 			name:	env.JOB_NAME,
-			sdir:	'lazy-ci',
-			stages:	[],
-			flags:	[],
-			labels:	[ default: 'master', docker: 'docker', linux: 'linux', mac: 'mac', android: 'android', ],
-			dists:	[],
+			sdir:	env.LAZY_SDIR ? env.LAZY_SDIR : 'lazy-pipeline',
+			stages:	env.LAZY_STAGES ? env.LAZY_STAGES.split("/n") : [],
+			flags:	env.LAZY_FLAGS ? env.LAZY_FLAGS.split("/n") : [],
+			labels:	env.LAZY_LABELS ? mapFromText(env.LAZY_LABELS) : [ default: 'master' ],
+			dists:	env.LAZY_DISTS ? env.LAZY_DISTS.split("/n") : [],
 			] + args
 
 		// Define parameters and their default values
@@ -71,10 +83,10 @@ def call(Map args = [:]) {
 		config.putAll([
 			name		: args.name,
 			sdir		: args.sdir,
-			stages		: params.stages.trim() != '' ? params.stages.trim().split("\n") : [],
-			flags		: params.flags.trim() != '' ? params.flags.trim().split("\n") : [],
-			labels		: labels,
-			dists		: params.dists.trim() != '' ? params.dists.trim().split("\n") : [],
+			stages		: params.stages && params.stages.trim() != '' ? params.stages.trim().split("\n") : args.stages,
+			flags		: params.flags && params.flags.trim() != '' ? params.flags.trim().split("\n") : args.flags,
+			labels		: params.labels && params.labels.trim() != '' ? mapFromText(params.labels.trim()) : args.labels,
+			dists		: params.dists && params.dists.trim() != '' ? params.dists.trim().split("\n") : args.dists,
 			verbose		: params.verbose as Integer,
 			extended 	: true,
 			branch		: env.BRANCH_NAME,
