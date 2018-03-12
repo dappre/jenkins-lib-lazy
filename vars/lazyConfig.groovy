@@ -22,70 +22,73 @@
 import groovy.transform.Field
 @Field public static Map config = [:]
 
+def mapFromText(String text) {
+	// Convert labels List from parameters back to Map in config
+	Map map = [:]
+	text.findAll(/([^=\n]+)=([^\n]+)/) { group ->
+		// REM: In Groovy console, the Closure parameters are 'full, key, value ->'
+		def key = group[1]
+		def value = group[2]
+		map[key] = value
+	}
+	return map
+}
+
 // Default method
-def call(String name = env.JOB_NAME, String sdir = 'lazy-ci') {
+def call(Map args = [:]) {
 	if (config && config.verbose > 1) echo "Config from lazyConfig = ${config}"
 
 	if (!config) {
-		def distsDef = []
-		def stagesDef = []
-		def flagsDef = []
-	
-		// Init stage to configure the pipeline
-		stage ("Init") {
-			node {
-				// Checkout the code in the workspace
-				checkout scm
-	
-				// Parse defined stages
-				stagesDef = sh(
-					returnStdout: true,
-					script: 'find ' + sdir + ' -mindepth 1 -maxdepth 1 -type d -exec basename "{}" \\; | grep -Po "^[^.]+" | sort | uniq'
-				).split('\n')
-				echo "Stages defined in workspace:\n" + stagesDef.join("\n")
-	
-				// Parse defined distributions
-				distsDef = sh(
-					returnStdout: true,
-					script: 'find ' + sdir + ' -mindepth 1 -maxdepth 2 -type f -name "*.Dockerfile" -exec basename "{}" \\; | grep -Po "^[^.]+" | sort | uniq'
-				).split('\n')
-	
-				echo "Distributions defined in workspace:\n" + distsDef.join("\n")
-			}
-		}
-	
+		// Override default arguments
+		args = [
+			name:	env.JOB_NAME,
+			sdir:	env.LAZY_SDIR ? env.LAZY_SDIR : 'lazy-pipeline',
+			stages:	env.LAZY_STAGES ? env.LAZY_STAGES.split("/n") : [],
+			flags:	env.LAZY_FLAGS ? env.LAZY_FLAGS.split("/n") : [],
+			labels:	env.LAZY_LABELS ? mapFromText(env.LAZY_LABELS) : [ default: 'master' ],
+			dists:	env.LAZY_DISTS ? env.LAZY_DISTS.split("/n") : [],
+			] + args
+
 		// Define parameters and their default values
 		properties([
 			parameters([
-				booleanParam(name: 'extended', defaultValue: false, description: 'Enable extended stages (requires extended lib)'),
-				textParam(name: 'listStages', defaultValue: stagesDef.join("\n"), description: 'List of stages to go through (when relevant)'),
-				textParam(name: 'listFlags', defaultValue: flagsDef.join("\n"), description: 'List of custom flags to be set'),
-				textParam(name: 'listDists', defaultValue: distsDef.join("\n"), description: 'List of distribution to use for this build'),
-				string(name: 'labelDocker', defaultValue: 'docker', description: 'Label of node(s) to run docker steps'),
+				textParam(name: 'stages', defaultValue: args.stages.join("\n"), description: 'List of stages to go through (default: blank = all)'),
+				textParam(name: 'flags', defaultValue: args.flags.join("\n"), description: 'List of custom flags to be set (default: blank = none)'),
+				textParam(name: 'labels', defaultValue: args.labels.collect{ it }.join("\n"), description: 'Map of node label to use for docker and other targeted agent'),
+				textParam(name: 'dists', defaultValue: args.dists.join("\n"), description: 'List of distribution to use inside docker'),
+				//string(name: 'labelDocker', defaultValue: 'docker', description: 'Label of node(s) to run docker steps'),
 				//			string(name: 'lbMacOS10', defaultValue: 'mac', description: 'Node label for Mac OS X 10'),
 				//			string(name: 'lbWindows10', defaultValue: 'windows', description: 'Node label for Windows 10'),
-				// Parameters to load the extended library
+				choice(name: 'verbose', choices: ['1', '2', '0'].join("\n"), defaultValue: '1', description: 'Control verbosity (where implemented)'),
+				// Parameters to load/enable the extended library
 				string(name: 'libExtRemote', defaultValue: 'https://github.com/digital-me/jenkins-lib-lazy-ext.git', description: 'Git URL of the extended shared library'),
 				string(name: 'libExtBranch', defaultValue: 'master', description: 'Git branch for the Extended shared library'),
 				string(name: 'libExtCredId', defaultValue: 'none', description: 'Credentials to access the Extended shared library'),
-				choice(name: 'verbose', choices: ['1', '2', '0'].join("\n"), defaultValue: '1', description: 'Control verbosity (where implemented)'),
+				booleanParam(name: 'extended', defaultValue: false, description: 'Enable extended stages (requires extended lib)'),
 			])
 		])
-	
+
+		// Convert labels List from parameters back to Map in config
+		Map labels = [:]
+		if (params.labels.trim() != '') {
+			params.labels.trim().findAll(/([^=\n]+)=([^\n]+)/) { group ->
+				// REM: In Groovy console, the Closure parameters are 'full, key, value ->'
+				def key = group[1]
+				def value = group[2]
+				Map label = labels[key] = value
+			}
+		}
+
 		// Instanciate a configuration object based on the parameters
-		//config.update(name, sdir, params, env.BRANCH_NAME)
 		config.putAll([
-			name		: name,
-			sdir		: sdir,
-			extended 	: true,
-			dists		: params.listDists.split("\n"),
-			stages		: params.listStages.split("\n"),
-			labels		: [
-				docker:		params.labelDocker,
-				default:	'master',
-			],
+			name		: args.name,
+			sdir		: args.sdir,
+			stages		: params.stages && params.stages.trim() != '' ? params.stages.trim().split("\n") : args.stages,
+			flags		: params.flags && params.flags.trim() != '' ? params.flags.trim().split("\n") : args.flags,
+			labels		: params.labels && params.labels.trim() != '' ? mapFromText(params.labels.trim()) : args.labels,
+			dists		: params.dists && params.dists.trim() != '' ? params.dists.trim().split("\n") : args.dists,
 			verbose		: params.verbose as Integer,
-			flags		: params.listFlags.split("\n"),
+			extended 	: true,
 			branch		: env.BRANCH_NAME,
 		])
 

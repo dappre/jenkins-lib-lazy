@@ -44,7 +44,7 @@ def call (body) {
 	}
 
 	// Skip stage if not listed in the config
-	if (!config.stages.contains(params.name)) {
+	if (config.stages && !config.stages.contains(params.name)) {
 		echo "Stage ${params.name} will be skipped (config.stages.${params.name} is not set)"
 		return 0
 	}
@@ -68,15 +68,24 @@ def call (body) {
 			// Prepare List of dists to be used for this task block
 			def dists = []
 			if (task.inside == '*') {
-				dists = config.dists
+				if (config.dists) {
+					echo "Expanding '*' with configured dists (${config.dists})"
+					dists = config.dists
+				} else {
+					error "Using '*' as value for inside key requires dists to be configured"
+				}
 			} else if (task.inside) {
 				dists = task.inside
 			}
 
+			// FIXME: Must be possible to fold the following conditionnal blocks in a simpler one
 			if (dists) {
-				// If inside docker, keeps adding each dist as a new block
+				// If inside docker, keeps adding each dist as a new branch block
 				dists.each { dist ->
-					if (config.verbose) echo "Stage ${params.name} inside ${dist} will be done using Docker (label = ${config.labels.docker})"
+					if (!config.labels['docker']) {
+						error "Can not find any label value for key = docker"
+					}
+					if (config.verbose) echo "Stage ${params.name} inside ${dist} will be done on agent with label = ${config.labels.docker}"
 					def branch = "${params.name}_${index++}_${dist}"
 					branches += [
 						(branch): {
@@ -94,15 +103,20 @@ def call (body) {
 					]
 				}
 			} else {
-				// If not, just add the block
-				def branch = "${params.name}_${index++}_${task.on}"
+				// If not, just add the branch block
+				def target = task.on ? task.on : 'default'
+				if (!config.labels[target]) {
+					error "Can not find any node with label = ${target}"
+				}
+				if (config.verbose) echo "Stage ${params.name} on ${target} will be done on agent with label = ${config.labels[target]}"
+				def branch = "${params.name}_${index++}_${target}"
 				branches += [
 					(branch): {
-						node(label: config.labels.default) {
+						node(label: config.labels[target]) {
 							checkout scm
 							try {
 								// Execute each steps
-								lazyStep(params.name, task.exec, task.on).each { step ->
+								lazyStep(params.name, task.exec, target).each { step ->
 									step ()
 								}
 							} catch (e) {
