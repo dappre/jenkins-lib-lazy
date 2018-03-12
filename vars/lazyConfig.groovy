@@ -31,9 +31,10 @@ def call(Map args = [:]) {
 		args = [
 			name:	env.JOB_NAME,
 			sdir:	'lazy-ci',
-			dists:	[],
 			stages:	[],
 			flags:	[],
+			labels:	[ default: 'master', docker: 'docker', linux: 'linux', mac: 'mac', android: 'android', ],
+			dists:	[],
 			] + args
 
 		// Define parameters and their default values
@@ -41,8 +42,9 @@ def call(Map args = [:]) {
 			parameters([
 				textParam(name: 'stages', defaultValue: args.stages.join("\n"), description: 'List of stages to go through (default: blank = all)'),
 				textParam(name: 'flags', defaultValue: args.flags.join("\n"), description: 'List of custom flags to be set (default: blank = none)'),
-				textParam(name: 'dists', defaultValue: args.dists.join("\n"), description: 'List of distribution to use for this build'),
-				string(name: 'labelDocker', defaultValue: 'docker', description: 'Label of node(s) to run docker steps'),
+				textParam(name: 'labels', defaultValue: args.labels.collect{ it }.join("\n"), description: 'Map of node label to use for docker and other targeted agent'),
+				textParam(name: 'dists', defaultValue: args.dists.join("\n"), description: 'List of distribution to use inside docker'),
+				//string(name: 'labelDocker', defaultValue: 'docker', description: 'Label of node(s) to run docker steps'),
 				//			string(name: 'lbMacOS10', defaultValue: 'mac', description: 'Node label for Mac OS X 10'),
 				//			string(name: 'lbWindows10', defaultValue: 'windows', description: 'Node label for Windows 10'),
 				choice(name: 'verbose', choices: ['1', '2', '0'].join("\n"), defaultValue: '1', description: 'Control verbosity (where implemented)'),
@@ -54,17 +56,25 @@ def call(Map args = [:]) {
 			])
 		])
 
+		// Convert labels List from parameters back to Map in config
+		Map labels = [:]
+		if (params.labels.trim() != '') {
+			params.labels.trim().findAll(/([^=\n]+)=([^\n]+)/) { group ->
+				// REM: In Groovy console, the Closure parameters are 'full, key, value ->'
+				def key = group[1]
+				def value = group[2]
+				Map label = labels[key] = value
+			}
+		}
+
 		// Instanciate a configuration object based on the parameters
 		config.putAll([
 			name		: args.name,
 			sdir		: args.sdir,
 			stages		: params.stages.trim() != '' ? params.stages.trim().split("\n") : [],
 			flags		: params.flags.trim() != '' ? params.flags.trim().split("\n") : [],
+			labels		: labels,
 			dists		: params.dists.trim() != '' ? params.dists.trim().split("\n") : [],
-			labels		: [
-				docker:		params.labelDocker,
-				default:	'master',
-			],
 			verbose		: params.verbose as Integer,
 			extended 	: true,
 			branch		: env.BRANCH_NAME,
