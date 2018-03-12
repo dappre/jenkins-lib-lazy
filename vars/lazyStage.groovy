@@ -44,7 +44,7 @@ def call (body) {
 	}
 
 	// Skip stage if not listed in the config
-	if (!config.stages.contains(params.name)) {
+	if (config.stages && !config.stages.contains(params.name)) {
 		echo "Stage ${params.name} will be skipped (config.stages.${params.name} is not set)"
 		return 0
 	}
@@ -68,7 +68,12 @@ def call (body) {
 			// Prepare List of dists to be used for this task block
 			def dists = []
 			if (task.inside == '*') {
-				dists = config.dists
+				if (config.dists) {
+					echo "Expanding '*' with configured dists (${config.dists})"
+					dists = config.dists
+				} else {
+					error "Using '*' as value for inside key requires dists to be configured"
+				}
 			} else if (task.inside) {
 				dists = task.inside
 			}

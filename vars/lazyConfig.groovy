@@ -23,69 +23,50 @@ import groovy.transform.Field
 @Field public static Map config = [:]
 
 // Default method
-def call(String name = env.JOB_NAME, String sdir = 'lazy-ci') {
+def call(Map args = [:]) {
 	if (config && config.verbose > 1) echo "Config from lazyConfig = ${config}"
 
 	if (!config) {
-		def distsDef = []
-		def stagesDef = []
-		def flagsDef = []
-	
-		// Init stage to configure the pipeline
-		stage ("Init") {
-			node {
-				// Checkout the code in the workspace
-				checkout scm
-	
-				// Parse defined stages
-				stagesDef = sh(
-					returnStdout: true,
-					script: 'find ' + sdir + ' -mindepth 1 -maxdepth 1 -type d -exec basename "{}" \\; | grep -Po "^[^.]+" | sort | uniq'
-				).split('\n')
-				echo "Stages defined in workspace:\n" + stagesDef.join("\n")
-	
-				// Parse defined distributions
-				distsDef = sh(
-					returnStdout: true,
-					script: 'find ' + sdir + ' -mindepth 1 -maxdepth 2 -type f -name "*.Dockerfile" -exec basename "{}" \\; | grep -Po "^[^.]+" | sort | uniq'
-				).split('\n')
-	
-				echo "Distributions defined in workspace:\n" + distsDef.join("\n")
-			}
-		}
-	
+		// Override default arguments
+		args = [
+			name:	env.JOB_NAME,
+			sdir:	'lazy-ci',
+			dists:	[],
+			stages:	[],
+			flags:	[],
+			] + args
+
 		// Define parameters and their default values
 		properties([
 			parameters([
-				booleanParam(name: 'extended', defaultValue: false, description: 'Enable extended stages (requires extended lib)'),
-				textParam(name: 'listStages', defaultValue: stagesDef.join("\n"), description: 'List of stages to go through (when relevant)'),
-				textParam(name: 'listFlags', defaultValue: flagsDef.join("\n"), description: 'List of custom flags to be set'),
-				textParam(name: 'listDists', defaultValue: distsDef.join("\n"), description: 'List of distribution to use for this build'),
+				textParam(name: 'stages', defaultValue: args.stages.join("\n"), description: 'List of stages to go through (default: blank = all)'),
+				textParam(name: 'flags', defaultValue: args.flags.join("\n"), description: 'List of custom flags to be set (default: blank = none)'),
+				textParam(name: 'dists', defaultValue: args.dists.join("\n"), description: 'List of distribution to use for this build'),
 				string(name: 'labelDocker', defaultValue: 'docker', description: 'Label of node(s) to run docker steps'),
 				//			string(name: 'lbMacOS10', defaultValue: 'mac', description: 'Node label for Mac OS X 10'),
 				//			string(name: 'lbWindows10', defaultValue: 'windows', description: 'Node label for Windows 10'),
-				// Parameters to load the extended library
+				choice(name: 'verbose', choices: ['1', '2', '0'].join("\n"), defaultValue: '1', description: 'Control verbosity (where implemented)'),
+				// Parameters to load/enable the extended library
 				string(name: 'libExtRemote', defaultValue: 'https://github.com/digital-me/jenkins-lib-lazy-ext.git', description: 'Git URL of the extended shared library'),
 				string(name: 'libExtBranch', defaultValue: 'master', description: 'Git branch for the Extended shared library'),
 				string(name: 'libExtCredId', defaultValue: 'none', description: 'Credentials to access the Extended shared library'),
-				choice(name: 'verbose', choices: ['1', '2', '0'].join("\n"), defaultValue: '1', description: 'Control verbosity (where implemented)'),
+				booleanParam(name: 'extended', defaultValue: false, description: 'Enable extended stages (requires extended lib)'),
 			])
 		])
-	
+
 		// Instanciate a configuration object based on the parameters
-		//config.update(name, sdir, params, env.BRANCH_NAME)
 		config.putAll([
-			name		: name,
-			sdir		: sdir,
-			extended 	: true,
-			dists		: params.listDists.split("\n"),
-			stages		: params.listStages.split("\n"),
+			name		: args.name,
+			sdir		: args.sdir,
+			stages		: params.stages.trim() != '' ? params.stages.trim().split("\n") : [],
+			flags		: params.flags.trim() != '' ? params.flags.trim().split("\n") : [],
+			dists		: params.dists.trim() != '' ? params.dists.trim().split("\n") : [],
 			labels		: [
 				docker:		params.labelDocker,
 				default:	'master',
 			],
 			verbose		: params.verbose as Integer,
-			flags		: params.listFlags.split("\n"),
+			extended 	: true,
 			branch		: env.BRANCH_NAME,
 		])
 
