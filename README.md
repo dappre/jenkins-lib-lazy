@@ -3,9 +3,11 @@ Re-usable shared library to setup lazy Jenkins pipelines
 
 ## TODO
 1. Implement logging and replace verbose level
+1. Support single branch pipeline jobs, maybe disabling dynamic parameters
+1. Document properly config, env and dynamic parameters
+1. Implement flags and/or flexible properties to be set from env, config and/or parameters
 1. Allow failFast to be defined per config and/or per stage
-1. Avoid required permissions if possible
-1. Allows flexible properties to be passed as env
+1. Avoid required permissions when possible
 
 
 ## Required permissions:
