@@ -19,9 +19,14 @@
  * limitations under the License.
  */
 
+import groovy.transform.Field
+import org.jenkins.ci.lazy.Logger
+
+@Field private logger = new Logger(this)
+
 // Function to copy Dockerfile from lib to workspace if needed and build the image
 def buildImage(stage, dist, args = '', filename = 'Dockerfile') {
-	// Retrieving global config
+	logger.debug('Retrieving config')
 	def config = lazyConfig()
 
 	def dstDockerfile = "./${stage}/${filename}"
@@ -73,7 +78,7 @@ def call (stage, task, dist, args = '') {
 	// Retrieving global config
 	def config = lazyConfig()
 
-	if (config.verbose) echo "Docker step for stage ${stage} inside ${dist}: started"
+	logger.info('Started')
 
 	// Execute pre closure first
 	if (task.preout) task.preout.call()
@@ -99,5 +104,5 @@ def call (stage, task, dist, args = '') {
 	// Execute post closure at the end
 	if (task.postout) task.postout.call()
 
-	if (config.verbose) echo "Docker step for stage ${stage} inside ${dist}: finished"
+	logger.info('Finished')
 }

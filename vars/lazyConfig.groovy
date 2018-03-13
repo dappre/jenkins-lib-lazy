@@ -83,7 +83,6 @@ def call(Map args = [:]) {
 			labels		: params.labels && params.labels.trim() != '' ? mapFromText(params.labels.trim()) : args.labels,
 			dists		: params.dists && params.dists.trim() != '' ? params.dists.trim().split("\n") : args.dists,
 			verbosity	: params.verbosity && params.verbosity.trim() != '' ? params.verbosity.trim() : args.verbosity,
-			verbose		: 1,
 			extended 	: true,
 			branch		: env.BRANCH_NAME,
 		])
