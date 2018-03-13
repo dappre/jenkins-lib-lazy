@@ -19,12 +19,17 @@
  * limitations under the License.
  */
 
+import groovy.transform.Field
+import org.jenkins.ci.lazy.Logger
+
+@Field private logger = new Logger(this)
+
 // Function to prepare and list shell scripts (copy from lib to workspace if needed)
 def listScripts(stage, scripts, target) {
-	// Retrieving global config
+	logger.debug('listScripts', 'Retrieving config')
 	def config = lazyConfig()
 
-	def scriptsLst = []
+	def scriptList = []
 
 	// Enter sub-folder where Dockerfiles and scripts are located
 	dir("${config.sdir}/${stage}") {
@@ -60,54 +65,50 @@ def listScripts(stage, scripts, target) {
 			}
 
 			// Add the path to the script in the final list to be returned
-			scriptsLst += dstScript
+			scriptList += dstScript
 		}
 	}
 
-	if (config.verbose) {
-		echo "Found ${scriptsLst.size()} shell tasks:"
-		scriptsLst.eachWithIndex { script, i ->
-			echo "${i + 1}.\t${script}"
-		}
-	}
+	logger.trace('listScripts', "Found ${scriptList.size()} shell tasks = ${scriptList}")
 	
-	return scriptsLst
+	return scriptList
 }
 
 // Parse task as Closure of (list of) String and return a List of step(s)
 def call (stage, task, target) {
-	// Retrieving global config
+	logger.debug('Retrieving config')
 	def config = lazyConfig()
 
-	// Collect steps to be executed
+	logger.debug('Collect steps to be resolved')
 	def steps = []
 	if (task instanceof Closure) {
-		if (config.verbose > 2) echo "Task is a Closure (${task})"
+		logger.trace("Task is a Closure (${task.toString()})")
 		// If task is a Closure, just add it in the step list
 		steps += task
 	} else {
 		// Prepare shell scripts from (list of) String
 		def scripts = []
 		if (task instanceof List) {
-			if (config.verbose > 2) echo "Task is a List (${task})"
+			logger.trace("Task is a List (${task.toString()})")
 			scripts = listScripts(stage, task, target)
 		} else if (task instanceof String) {
-			if (config.verbose > 2) echo "Task is a String (${task})"
+			logger.trace("Task is a String (${task.toString()})")
 			scripts = listScripts(stage, [ task ], target)
 		} else {
 			// Give up if not a Closure, not a List and not a String!
-			error "No idea what to do with ${task}".toString()
+			def err = "No idea what to do with task = ${task.toString()}"
+			logger.fatal(err)
+			error err.toString()
 		}
 
 		// Collect all scripts as shell steps
-		if (config.verbose > 2) echo "Task was referring to {scripts.size()} scripts (${scripts})"
+		logger.trace("Task was referring to {scripts.size()} scripts (${scripts})")
 		scripts.each { script ->
 			steps += { sh "${config.sdir}/${stage}/${script}" }
 		}
 	}
+	logger.trace("Task has been converted in {steps.size()} steps (${steps.toString()})")
 
-	// Execute each collected steps
-	if (config.verbose > 2) echo "Task has been converted in {steps.size()} steps (${steps})"
-	
+	logger.debug('Return list of resolved steps')
 	return steps
 }

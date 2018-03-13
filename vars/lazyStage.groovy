@@ -19,6 +19,11 @@
  * limitations under the License.
  */
 
+import groovy.transform.Field
+import org.jenkins.ci.lazy.Logger
+
+@Field private logger = new Logger(this)
+
 def call (body) {
 	def params = [
 		name:		null,
@@ -29,7 +34,7 @@ def call (body) {
 	body.delegate = params
 	body()
 
-	// Retrieving global config
+	logger.debug(params.name, 'Retrieving config')
 	def config = lazyConfig()
 
 	// Check parameters and config for possible error
@@ -45,12 +50,12 @@ def call (body) {
 
 	// Skip stage if not listed in the config
 	if (config.stages && !config.stages.contains(params.name)) {
-		echo "Stage ${params.name} will be skipped (config.stages.${params.name} is not set)"
+		logger.warn(params.name, "Skipped because (config.stages.${params.name} is not set)")
 		return 0
 	}
 
 	stage(Character.toUpperCase(params.name.charAt(0)).toString() + params.name.substring(1)) {
-		if (config.verbose) echo "Stage ${params.name} for ${config.name} begins here"
+		logger.info(params.name, "Started")
 
 		// Collect all tasks in a Map of pipeline branches (as Closure) to be run in parallel
 		def branches = [:]
@@ -69,7 +74,7 @@ def call (body) {
 			def dists = []
 			if (task.inside == '*') {
 				if (config.dists) {
-					echo "Expanding '*' with configured dists (${config.dists})"
+					logger.debug(params.name, "Expanding '*' with configured dists (${config.dists})")
 					dists = config.dists
 				} else {
 					error "Using '*' as value for inside key requires dists to be configured"
@@ -85,8 +90,8 @@ def call (body) {
 					if (!config.labels['docker']) {
 						error "Can not find any label value for key = docker"
 					}
-					if (config.verbose) echo "Stage ${params.name} inside ${dist} will be done on agent with label = ${config.labels.docker}"
-					def branch = "${params.name}_${index++}_${dist}"
+					def branch = "${params.name}/${dist}/${index++}"
+					logger.info(branch, "Preparing to branch on agent with label = ${config.labels.docker}")
 					branches += [
 						(branch): {
 							node(label: config.labels.docker) {
@@ -108,8 +113,8 @@ def call (body) {
 				if (!config.labels[target]) {
 					error "Can not find any node with label = ${target}"
 				}
-				if (config.verbose) echo "Stage ${params.name} on ${target} will be done on agent with label = ${config.labels[target]}"
-				def branch = "${params.name}_${index++}_${target}"
+				def branch = "${params.name}/${target}/${index++}"
+				logger.info(branch, "Preparing to branch on agent with label = ${config.labels[target]}")
 				branches += [
 					(branch): {
 						node(label: config.labels[target]) {
@@ -133,6 +138,6 @@ def call (body) {
 		// Now we can execute block(s) in parallel
 		parallel(branches)
 		
-		if (config.verbose) echo "Stage ${params.name} for ${config.name} ends here"
+		logger.info(params.name, 'Finished')
 	}
 }

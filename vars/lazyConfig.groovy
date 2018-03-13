@@ -20,46 +20,52 @@
  */
 
 import groovy.transform.Field
+import org.jenkins.ci.lazy.Logger
+
+@Field private logger = new Logger(this)
 @Field public static Map config = [:]
 
+// Convert list of key/pair from text to Map
 def mapFromText(String text) {
-	// Convert labels List from parameters back to Map in config
+	logger.debug('mapFromText', 'Convert list of key/pair from String to Map')
+	logger.trace('mapFromText', "Parse from String = " + text.replaceAll("\\\n", "\\\\\\n"))
 	Map map = [:]
 	text.findAll(/([^=\n]+)=([^\n]+)/) { group ->
 		// REM: In Groovy console, the Closure parameters are 'full, key, value ->'
 		def key = group[1]
 		def value = group[2]
+		logger.trace('mapFromText', "Add key = ${key} and value = ${value}")
 		map[key] = value
 	}
+
+	logger.trace('mapFromText', "Resulting map = ${map}")
 	return map
 }
 
 // Default method
 def call(Map args = [:]) {
-	if (config && config.verbose > 1) echo "Config from lazyConfig = ${config}"
+	logger.trace("Current config = ${config}")
 
 	if (!config) {
-		// Override default arguments
+		logger.debug('init', 'Preparing config from env if available or hardcoded defaults if needed, squashed with args if set')
 		args = [
-			name:	env.JOB_NAME,
-			sdir:	env.LAZY_SDIR ? env.LAZY_SDIR : 'lazy-pipeline',
-			stages:	env.LAZY_STAGES ? env.LAZY_STAGES.split("/n") : [],
-			flags:	env.LAZY_FLAGS ? env.LAZY_FLAGS.split("/n") : [],
-			labels:	env.LAZY_LABELS ? mapFromText(env.LAZY_LABELS) : [ default: 'master' ],
-			dists:	env.LAZY_DISTS ? env.LAZY_DISTS.split("/n") : [],
+			name:		env.JOB_NAME,
+			sdir:		env.LAZY_SDIR ? env.LAZY_SDIR : 'lazy-pipeline',
+			stages:		env.LAZY_STAGES ? env.LAZY_STAGES.split("/n") : [],
+			flags:		env.LAZY_FLAGS ? env.LAZY_FLAGS.split("/n") : [],
+			labels:		env.LAZY_LABELS ? mapFromText(env.LAZY_LABELS) : [ default: 'master' ],
+			dists:		env.LAZY_DISTS ? env.LAZY_DISTS.split("/n") : [],
+			verbosity:	env.LAZY_VERBOSITY ? env.LAZY_VERBOSITY : 'INFO',
 			] + args
 
-		// Define parameters and their default values
+		logger.debug('init', 'Generate and retrieve user altered config')
 		properties([
 			parameters([
 				textParam(name: 'stages', defaultValue: args.stages.join("\n"), description: 'List of stages to go through (default: blank = all)'),
 				textParam(name: 'flags', defaultValue: args.flags.join("\n"), description: 'List of custom flags to be set (default: blank = none)'),
 				textParam(name: 'labels', defaultValue: args.labels.collect{ it }.join("\n"), description: 'Map of node label to use for docker and other targeted agent'),
 				textParam(name: 'dists', defaultValue: args.dists.join("\n"), description: 'List of distribution to use inside docker'),
-				//string(name: 'labelDocker', defaultValue: 'docker', description: 'Label of node(s) to run docker steps'),
-				//			string(name: 'lbMacOS10', defaultValue: 'mac', description: 'Node label for Mac OS X 10'),
-				//			string(name: 'lbWindows10', defaultValue: 'windows', description: 'Node label for Windows 10'),
-				choice(name: 'verbose', choices: ['1', '2', '0'].join("\n"), defaultValue: '1', description: 'Control verbosity (where implemented)'),
+				choice(name: 'verbosity', choices: logger.getLevels().join("\n"), defaultValue: 'INFO', description: 'Control verbosity (where implemented)'),
 				// Parameters to load/enable the extended library
 				string(name: 'libExtRemote', defaultValue: 'https://github.com/digital-me/jenkins-lib-lazy-ext.git', description: 'Git URL of the extended shared library'),
 				string(name: 'libExtBranch', defaultValue: 'master', description: 'Git branch for the Extended shared library'),
@@ -68,18 +74,7 @@ def call(Map args = [:]) {
 			])
 		])
 
-		// Convert labels List from parameters back to Map in config
-		Map labels = [:]
-		if (params.labels.trim() != '') {
-			params.labels.trim().findAll(/([^=\n]+)=([^\n]+)/) { group ->
-				// REM: In Groovy console, the Closure parameters are 'full, key, value ->'
-				def key = group[1]
-				def value = group[2]
-				Map label = labels[key] = value
-			}
-		}
-
-		// Instanciate a configuration object based on the parameters
+		logger.debug('init', 'Create config map based on the user parameters and the prepared ones')
 		config.putAll([
 			name		: args.name,
 			sdir		: args.sdir,
@@ -87,13 +82,16 @@ def call(Map args = [:]) {
 			flags		: params.flags && params.flags.trim() != '' ? params.flags.trim().split("\n") : args.flags,
 			labels		: params.labels && params.labels.trim() != '' ? mapFromText(params.labels.trim()) : args.labels,
 			dists		: params.dists && params.dists.trim() != '' ? params.dists.trim().split("\n") : args.dists,
-			verbose		: params.verbose as Integer,
+			verbosity	: params.verbosity && params.verbosity.trim() != '' ? params.verbosity.trim() : args.verbosity,
 			extended 	: true,
 			branch		: env.BRANCH_NAME,
 		])
-
-		// Load Extended library if available and update configuration accordingly
-		if (config.verbose) echo 'Trying to load Extended library...'
+		// Set default logging level from config
+		logger.setLevel(config.verbosity)
+		logger.trace('init', "New config = ${config}")
+		
+		logger.debug('init', 'Load Extended library if available and update configuration accordingly')
+		logger.info('lib', 'Trying to load Extended library...')
 		try {
 			library(
 					identifier: "libExt@${params.libExtBranch}",
@@ -103,15 +101,14 @@ def call(Map args = [:]) {
 						credentialsId: params.libExtCredId
 					])
 					)
-			if (config.verbose) echo 'Extended shared library loaded: extended features are supported'
+			logger.info('lib', 'Extended shared library loaded: extended features are supported')
 		} catch (error) {
-			if (config.verbose) echo 'Extended shared library could NOT be loaded: extended features are disabled'
-			if(config.verbose > 1) {
-				echo "Warning message:\n${error.message}"
-			}
+			logger.info('lib', 'Extended shared library could NOT be loaded: extended features are disabled')
+			logger.warn('lib', "Extended shared library loading error message: ${error.message}")
 			config.extended = false
 		}
 	}
 
+	logger.debug('Return config map')
 	return config
 }
