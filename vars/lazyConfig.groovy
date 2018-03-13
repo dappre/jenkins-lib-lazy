@@ -20,25 +20,38 @@
  */
 
 import groovy.transform.Field
+import org.jenkins.ci.lazy.Logger
+
+@Field private logger = new Logger(this, 'DEBUG')
 @Field public static Map config = [:]
 
 def mapFromText(String text) {
+	logger.push('mapFromText')
+	
 	// Convert labels List from parameters back to Map in config
 	Map map = [:]
+	logger.debug("Start parsing text to map from content = " + text.replaceAll("\\\n", "\\\\\\n"))
 	text.findAll(/([^=\n]+)=([^\n]+)/) { group ->
 		// REM: In Groovy console, the Closure parameters are 'full, key, value ->'
 		def key = group[1]
 		def value = group[2]
+		logger.debug("Adding one matched tuple of key = ${key} and value = ${value}")
 		map[key] = value
 	}
+
+	logger.pop() // To remove previously added extra loggin info
+
 	return map
 }
 
 // Default method
 def call(Map args = [:]) {
 	if (config && config.verbose > 1) echo "Config from lazyConfig = ${config}"
+	logger.info("Current config = ${config}")
 
 	if (!config) {
+		logger.push('init')
+		
 		// Override default arguments
 		args = [
 			name:	env.JOB_NAME,
@@ -91,9 +104,11 @@ def call(Map args = [:]) {
 			extended 	: true,
 			branch		: env.BRANCH_NAME,
 		])
-
+		logger.debug("New config = ${config}")
+		
 		// Load Extended library if available and update configuration accordingly
-		if (config.verbose) echo 'Trying to load Extended library...'
+		logger.push('lib')
+		logger.info('Trying to load Extended library...')
 		try {
 			library(
 					identifier: "libExt@${params.libExtBranch}",
@@ -103,14 +118,13 @@ def call(Map args = [:]) {
 						credentialsId: params.libExtCredId
 					])
 					)
-			if (config.verbose) echo 'Extended shared library loaded: extended features are supported'
+			logger.info('Extended shared library loaded: extended features are supported')
 		} catch (error) {
-			if (config.verbose) echo 'Extended shared library could NOT be loaded: extended features are disabled'
-			if(config.verbose > 1) {
-				echo "Warning message:\n${error.message}"
-			}
+			logger.info('Extended shared library could NOT be loaded: extended features are disabled')
+			logger.warning("Extended shared library loading error message: ${error.message}")
 			config.extended = false
 		}
+		logger.reset()
 	}
 
 	return config
