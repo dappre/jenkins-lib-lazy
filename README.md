@@ -15,4 +15,3 @@ Re-usable shared library to setup lazy Jenkins pipelines
 - method java.lang.Class isInstance java.lang.Object
 - staticMethod org.codehaus.groovy.runtime.DefaultGroovyMethods invokeMethod java.lang.Object
 - staticMethod org.codehaus.groovy.runtime.DefaultGroovyMethods contains java.lang.Object[] java.lang.Object
-- staticMethod org.codehaus.groovy.runtime.DefaultGroovyMethods getAt java.lang.Object[] java.util.Collection - from Logger.pop()

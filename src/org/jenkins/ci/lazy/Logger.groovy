@@ -23,69 +23,72 @@ package org.jenkins.ci.lazy
  
 class Logger implements Serializable { 
 
-	static final Map levels = [
-	    TRACE:		1,
-	    DEBUG:		2,
-	    INFO:		3,
-	    WARNING:	4,
-	    ERROR:		5,
+	// Define property for log levels (default first for parameter choice)
+	private static final Map levels = [
+	    INFO:	2,
+	    TRACE:	0,
+	    DEBUG:	1,
+	    WARN:	3,
+	    ERROR:	4,
+		FATAL:	5,
 	]
+	private static String globalLevel = 'INFO'
+	private final String level = null
 
-	String level = 'INFO'
+	// Define field for caller class and its name
 	private caller = null
 	final String name = null
-	private String[] extra = []
 
-	def Logger (caller) {
+	public Logger (caller, level = null) {
 		this.caller = caller
 		this.name = caller.class.name
+		if (level) {
+			this.level = level
+		}
 	}
 
-	def Logger (caller, level) {
-		this.caller = caller
-		this.name = caller.class.name
-		this.level = level
+  	// Getter for all levels
+  	public List getLevels() {
+    	return levels.keySet() as List
+    }
+
+	// Setter for global shared level
+	public void setLevel(level) {
+		this.globalLevel = level
 	}
 
-	def set(String extra) {
-		this.extra = extra
+	// Getter for active level
+	public String getLevel() {
+		return this.level ? this.level : globalLevel
 	}
 
-	def push(String extra) {
-		this.extra += extra 
+	public void trace(sub = null, msg) {
+	    log(sub, msg, 'TRACE')
 	}
 
-	def pop() {
-		this.extra = this.extra ? this.extra[0..-2] : null
-	}
-	
-	def reset() {
-		this.extra = null
+	public void debug(sub = null, msg) {
+	    log(sub, msg, 'DEBUG')
 	}
 
-	def trace(msg) {
-	    log(msg, 'TRACE')
+	public void info(sub = null, msg) {
+	    log(sub, msg, 'INFO')
 	}
 
-	def debug(msg) {
-	    log(msg, 'DEBUG')
+	public void warn(sub = null, msg) {
+	    log(sub, msg, 'WARN')
 	}
 
-	def info(msg) {
-	    log(msg, 'INFO')
+	public void error(sub = null, msg) {
+	    log(sub, msg, 'ERROR')
 	}
 
-	def warning(msg) {
-	    log(msg, 'WARNING')
+	public void fatal(sub = null, msg) {
+	    log(sub, msg, 'FATAL')
 	}
 
-	def error(msg) {
-	    log(msg, 'ERROR')
-	}
-
-	def log(msg, level) {
-	    if (levels[level] >= levels[this.level]) {
-	        caller.echo "${level} ${name}" + (extra ? "[${extra.join('/')}]" : "") + " - ${msg}"
+	private void log(sub = null, msg, level) {
+	    if (levels[level] >= levels[getLevel()]) {
+	        caller.echo "${level} ${name}" + (sub ? "[${sub}]" : "") + " - ${msg}"
 	    }
 	}
 }
