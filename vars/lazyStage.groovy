@@ -92,7 +92,9 @@ def call (body) {
 							node(label: label) {
 							    checkout scm
                                 try {
-									lazyDocker(params.name, task, dist, params.dockerArgs)
+									ansiColor('xterm') {
+										lazyDocker(params.name, task, dist, params.dockerArgs)
+									}
 								} catch (e) {
 									error e.toString()
 								} finally {
@@ -119,8 +121,10 @@ def call (body) {
 								checkout scm
 							try {
 								// Execute each steps
-								lazyStep(params.name, task.exec, target).each { step ->
-									step ()
+								ansiColor('xterm') {
+									lazyStep(params.name, task.exec, target).each { step ->
+										step ()
+									}
 								}
 							} catch (e) {
 								error e.toString()

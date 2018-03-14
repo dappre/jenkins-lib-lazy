@@ -64,13 +64,11 @@ def buildImage(stage, dist, args = '', filename = 'Dockerfile') {
 	def uid = sh(returnStdout: true, script: 'id -u').trim()
 	def gid = sh(returnStdout: true, script: 'id -g').trim()
 	
-	ansiColor('xterm') {
-		withEnv(["UID=${uid}", "GID=${gid}"]) {
-			return docker.build(
-				"${config.name}-${stage}-${dist}:${config.branch}",
-				"--build-arg dir=${stage} --build-arg uid=${env.UID} --build-arg gid=${env.GID} -f ${config.sdir}/${dstDockerfile} ${config.sdir}"
-			)
-		}
+	withEnv(["UID=${uid}", "GID=${gid}"]) {
+		return docker.build(
+			"${config.name}-${stage}-${dist}:${config.branch}",
+			"--build-arg dir=${stage} --build-arg uid=${env.UID} --build-arg gid=${env.GID} -f ${config.sdir}/${dstDockerfile} ${config.sdir}"
+		)
 	}
 }
 
@@ -91,12 +89,10 @@ def call (stage, task, dist, args = '') {
 
 	// Run each shell scripts as task inside the Docker
 	imgDocker.inside(args) {
-		ansiColor('xterm') {
-			withEnv(["DIST=${dist}"]) {
-				// Execut each step
-				steps.each { step ->
-					step()
-				}
+		withEnv(["DIST=${dist}"]) {
+			// Execut each step
+			steps.each { step ->
+				step()
 			}
 		}
 	}
