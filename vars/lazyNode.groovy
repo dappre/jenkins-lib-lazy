@@ -48,7 +48,7 @@ def call(stage, index, task, target, dist = null) {
 						if (task.pre) task.pre.call()
 
 						if (dist) {
-							lazyDocker(stage, task.run, dist, params.dockerArgs)
+							lazyDocker(stage, task.run, dist, task.args)
 						} else {
 							lazyStep(stage, task.run, target).each { step ->
 								step()
