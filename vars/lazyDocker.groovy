@@ -78,11 +78,8 @@ def call (stage, task, dist, args = '') {
 
 	logger.info('Started')
 
-	// Execute pre closure first
-	if (task.preout) task.preout.call()
-
 	// Prepare steps without executing
-	def steps = lazyStep(stage, task.exec, dist)
+	def steps = lazyStep(stage, task, dist)
 	
 	// Build the relevant Docker image
 	def imgDocker = buildImage(stage, dist)
@@ -96,9 +93,6 @@ def call (stage, task, dist, args = '') {
 			}
 		}
 	}
-
-	// Execute post closure at the end
-	if (task.postout) task.postout.call()
 
 	logger.info('Finished')
 }

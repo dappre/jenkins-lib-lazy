@@ -62,84 +62,32 @@ def call (body) {
 		def index = 1
 
 		params.tasks.each { task ->
-			// Prepare List of dists to be used for this task block
-			def dists = []
-			if (task.inside == '*') {
+			// Prepare target and list of dists to be used for this task block
+			// By default, no Docker dist
+			def target = task.on ? task.on : 'default'
+			def dists = [ null, ]
+
+			if (task.in == '*') {
 				if (config.dists) {
 					logger.debug(params.name, "Expanding '*' with configured dists (${config.dists})")
 					dists = config.dists
 				} else {
 					error "Using '*' as value for inside key requires dists to be configured"
 				}
-			} else if (task.inside) {
-				dists = task.inside
+			} else if (task.in) {
+				// If inside docker, change default target and dists
+				target = task.on ? task.on : 'docker'
+				dists = task.in
 			}
 
-			// FIXME: Must be possible to fold the following conditionnal blocks in a simpler one
-			if (dists) {
-				// If inside docker, keeps adding each dist as a new branch block
-				dists.each { dist ->
-					def target = task.on ? task.on : 'docker'
-					logger.debug("Detected tasks to be run on ${target}")
-					if (config.labels[target]) {
-						label = config.labels[target]
-						logger.info("Mapping found for label ${target} = ${label}")
-					}
-					def branch = "${params.name}/${dist}/${index++}"
-					logger.info(branch, "Preparing to branch on agent with label = ${label}")
-					branches += [
-						(branch): {
-							node(label: label) {
-							    checkout scm
-                                try {
-									ansiColor('xterm') {
-										lazyDocker(params.name, task, dist, params.dockerArgs)
-									}
-								} catch (e) {
-									error e.toString()
-								} finally {
-									step([$class: 'WsCleanup'])
-								}
-							}
-						}
-					]
-				}
-			} else {
-				// If not, just add the branch block
-				def target = task.on ? task.on : 'default'
-				logger.debug("Detected tasks to be run on ${target}")
-				def label = target
-				if (config.labels[target]) {
-					label = config.labels[target]
-					logger.info("Mapping found for label ${target} = ${label}")
-				}
-				def branch = "${params.name}/${target}/${index++}"
-				logger.info(branch, "Preparing to branch on agent with label = ${label}")
-				branches += [
-					(branch): {
-						node(label: label) {
-								checkout scm
-							try {
-								// Execute each steps
-								ansiColor('xterm') {
-									lazyStep(params.name, task.exec, target).each { step ->
-										step ()
-									}
-								}
-							} catch (e) {
-								error e.toString()
-							} finally {
-								step([$class: 'WsCleanup'])
-							}
-						}
-					}
-				]
+			dists.each { dist ->
+				branches += lazyNode(params.name, index++, task, target, dist)
 			}
 		}
 
 		// Now we can execute block(s) in parallel
 		parallel(branches)
-		
+
 		logger.info(params.name, 'Finished')
 	}
 }
