@@ -62,14 +62,6 @@ def call (body) {
 		def index = 1
 
 		params.tasks.each { task ->
-			// Lookup node label to be used for this task bloc
-			def label = config.labels.default
-			if (task.on) {
-				label = config.labels[task.on]
-			} else if (task.inside) {
-				label = config.labels.docker
-			}
-
 			// Prepare List of dists to be used for this task block
 			def dists = []
 			if (task.inside == '*') {
@@ -87,16 +79,19 @@ def call (body) {
 			if (dists) {
 				// If inside docker, keeps adding each dist as a new branch block
 				dists.each { dist ->
-					if (!config.labels['docker']) {
-						error "Can not find any label value for key = docker"
+					def target = task.on ? task.on : 'docker'
+					logger.debug("Detected tasks to be run on ${target}")
+					if (config.labels[target]) {
+						label = config.labels[target]
+						logger.info("Mapping found for label ${target} = ${label}")
 					}
 					def branch = "${params.name}/${dist}/${index++}"
-					logger.info(branch, "Preparing to branch on agent with label = ${config.labels.docker}")
+					logger.info(branch, "Preparing to branch on agent with label = ${label}")
 					branches += [
 						(branch): {
-							node(label: config.labels.docker) {
-								checkout scm
-								try {
+							node(label: label) {
+							    checkout scm
+                                try {
 									lazyDocker(params.name, task, dist, params.dockerArgs)
 								} catch (e) {
 									error e.toString()
@@ -110,15 +105,18 @@ def call (body) {
 			} else {
 				// If not, just add the branch block
 				def target = task.on ? task.on : 'default'
-				if (!config.labels[target]) {
-					error "Can not find any node with label = ${target}"
+				logger.debug("Detected tasks to be run on ${target}")
+				def label = target
+				if (config.labels[target]) {
+					label = config.labels[target]
+					logger.info("Mapping found for label ${target} = ${label}")
 				}
 				def branch = "${params.name}/${target}/${index++}"
-				logger.info(branch, "Preparing to branch on agent with label = ${config.labels[target]}")
+				logger.info(branch, "Preparing to branch on agent with label = ${label}")
 				branches += [
 					(branch): {
-						node(label: config.labels[target]) {
-							checkout scm
+						node(label: label) {
+								checkout scm
 							try {
 								// Execute each steps
 								lazyStep(params.name, task.exec, target).each { step ->
