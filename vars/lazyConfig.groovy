@@ -50,7 +50,7 @@ def call(Map args = [:]) {
 		logger.debug('init', 'Preparing config from env if available or hardcoded defaults if needed, squashed with args if set')
 		args = [
 			name:		env.JOB_NAME,
-			sdir:		env.LAZY_SDIR ? env.LAZY_SDIR : 'lazy-pipeline',
+			sdir:		env.LAZY_SDIR ? env.LAZY_SDIR : 'lazyDir',
 			stages:		env.LAZY_STAGES ? env.LAZY_STAGES.split("/n") : [],
 			flags:		env.LAZY_FLAGS ? env.LAZY_FLAGS.split("/n") : [],
 			labels:		env.LAZY_LABELS ? mapFromText(env.LAZY_LABELS) : [ default: 'master' ],
