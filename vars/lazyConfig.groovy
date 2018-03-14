@@ -30,7 +30,7 @@ def mapFromText(String text) {
 	logger.debug('mapFromText', 'Convert list of key/pair from String to Map')
 	logger.trace('mapFromText', "Parse from String = " + text.replaceAll("\\\n", "\\\\\\n"))
 	Map map = [:]
-	text.findAll(/([^=\n]+)=([^\n]+)/) { group ->
+	text.findAll(/([^=\n\s,]+)=([^\n\s,]+)/) { group ->
 		// REM: In Groovy console, the Closure parameters are 'full, key, value ->'
 		def key = group[1]
 		def value = group[2]
