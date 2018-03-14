@@ -24,38 +24,42 @@ import org.jenkins.ci.lazy.Logger
 
 @Field private logger = new Logger(this)
 
-def call(stage, index, task, target, dist = null) {
+def call(stage, index, task, dist = null) {
 	logger.debug('Retrieving config')
 	def config = lazyConfig()
 
-	logger.debug("Detected tasks to be run on ${target}")
-	def label = target
-	if (config.labels[target]) {
-		label = config.labels[target]
-		logger.info("Mapping found for label ${target} = ${label}")
+	def name = dist ? "${stage}/${index}/${dist}" : "${stage}/${index}/${task.on}"
+	logger.debug(name, "Detected tasks to be run on ${task.on}")
+	def label = task.on
+	if (config.labels[task.on]) {
+		label = config.labels[task.on]
+		logger.info(name, "Mapping found for label ${task.on} = ${label}")
 	}
 
-	def name = "${stage}/${index}/${target}"
 	logger.info(name, "Preparing to branch on agent with label = ${label}")
 	def branch = [
 		(name): {
 			node(label: label) {
 				try {
+					logger.debug(name, 'Checkout SCM')
 					checkout scm
-
 					ansiColor('xterm') {
-						// Execute pre closure first
+						logger.debug(name, 'Execute pre closure first')
+						logger.trace(name, "Post closure = ${task.pre.toString()}")
 						if (task.pre) task.pre.call()
 
 						if (dist) {
+							logger.debug(name, 'Docker required - Calling lazyDocker')
 							lazyDocker(stage, task.run, dist, task.args)
 						} else {
-							lazyStep(stage, task.run, target).each { step ->
+							logger.debug(name, 'Docker not required - Calling lazyStep')
+							lazyStep(stage, task.run, task.on).each { step ->
 								step()
 							}
 						}
 
-						// Execute post closure at the end
+						logger.debug(name, 'Execute post closure at the end')
+						logger.trace(name, "Post closure = ${task.post.toString()}")
 						if (task.post) task.post.call()
 					}
 				} catch (e) {
@@ -67,5 +71,6 @@ def call(stage, index, task, target, dist = null) {
 		}
 	]
 
+	logger.trace(name , "Branch block ready = ${branch.toString()}")
 	return branch
 }

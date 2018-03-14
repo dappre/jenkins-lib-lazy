@@ -28,7 +28,6 @@ def call (body) {
 	def params = [
 		name:		null,
 		tasks:		[],
-		dockerArgs:	'',
 	]
 	body.resolveStrategy = Closure.DELEGATE_FIRST
 	body.delegate = params
@@ -57,37 +56,45 @@ def call (body) {
 	stage(Character.toUpperCase(params.name.charAt(0)).toString() + params.name.substring(1)) {
 		logger.info(params.name, "Started")
 
-		// Collect all tasks in a Map of pipeline branches (as Closure) to be run in parallel
+		logger.debug(params.name, 'Convert a single task in a List before walk in')	
+		def tasks = (params.tasks instanceof List) ? params.tasks : [ params.tasks ]
+		
+		logger.debug(params.name, 'Collect all tasks in a Map of pipeline branches (as Closure) to be run in parallel')
 		def branches = [:]
 		def index = 1
 
-		params.tasks.each { task ->
-			// Prepare target and list of dists to be used for this task block
-			// By default, no Docker dist
-			def target = task.on ? task.on : 'default'
-			def dists = [ null, ]
-
+		tasks.each { task ->
+			logger.debug(params.name, 'Add possible missing keys to the task Map')
+			logger.trace(params.name, "Task content before = ${task.dump()}")
+			task = [
+				run:	{ error 'Nothing to run' },
+				on:		'default',
+				pre:	null,
+				post:	null,
+				in:		[ null, ],
+				args:	'',
+			] + task
+			logger.trace(params.name, "Task content after = ${task.dump()}")
+			
+			logger.debug(params.name, 'Prepare the list of dists to be used for this task block')
 			if (task.in == '*') {
 				if (config.dists) {
 					logger.debug(params.name, "Expanding '*' with configured dists (${config.dists})")
-					dists = config.dists
+					task.in = config.dists
 				} else {
 					error "Using '*' as value for inside key requires dists to be configured"
 				}
-			} else if (task.in) {
-				// If inside docker, change default target and dists
-				target = task.on ? task.on : 'docker'
-				dists = task.in
 			}
 
-			dists.each { dist ->
-				branches += lazyNode(params.name, index++, task, target, dist)
+			logger.debug(params.name, 'Walking in task.in to populate branches')
+			task.in.each { dist ->
+				logger.trace("${params.name}/${index}/${dist}", "Processing dist = ${dist.toString()}")
+				branches += lazyNode(params.name, index++, task, dist)
 			}
 		}
 
 		// Now we can execute block(s) in parallel
 		parallel(branches)
-
 		logger.info(params.name, 'Finished')
 	}
 }
