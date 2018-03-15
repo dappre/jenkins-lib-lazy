@@ -26,16 +26,16 @@ import org.jenkins.ci.lazy.Logger
 
 // Function to prepare and list shell scripts (copy from lib to workspace if needed)
 def listScripts(stage, scripts, target) {
-	logger.debug("listScripts/${stage}/${target}", 'Retrieving config')
+	logger.debug('listScripts', 'Retrieving config')
 	def config = lazyConfig()
 
 	def scriptList = []
 
-	logger.debug("listScripts/${stage}/${target}", 'Enter sub-folder where Dockerfiles and scripts are located')
+	logger.debug('listScripts', 'Enter sub-folder where Dockerfiles and scripts are located')
 	dir("${config.sdir}/${stage}") {
 		scripts.each { script ->
 			def dstScript = "${script}"	// Default main script location
-			logger.debug("listScripts/${stage}/${target}", 'Lookup fo the relevant main script in sub workspace first')
+			logger.debug('listScripts', 'Lookup fo the relevant main script in sub workspace first')
 			// TODO: Rework to use fileExists?
 			def srcScript = sh(
 				returnStdout: true,
@@ -43,10 +43,10 @@ def listScripts(stage, scripts, target) {
 			).trim()
 
 			if (srcScript != null && srcScript != '') {
-				logger.debug("listScripts/${stage}/${target}", 'Use script from workspace since existing')
+				logger.debug('listScripts', 'Use script from workspace since existing')
 				dstScript = srcScript
 			} else {
-				logger.debug("listScripts/${stage}/${target}", 'Extract main script from shared lib')
+				logger.debug('listScripts', 'Extract main script from shared lib')
 				def contentscript = ''
 				try {
 					contentscript = libraryResource("${config.sdir}/${stage}/${target}.${script}")
@@ -54,18 +54,18 @@ def listScripts(stage, scripts, target) {
 					contentscript = libraryResource("${config.sdir}/${stage}/${script}")
 				}
 
-				logger.debug("listScripts/${stage}/${target}", 'Write the selected Dockerfile to workspace sub-folder')
+				logger.debug('listScripts', 'Write the selected Dockerfile to workspace sub-folder')
 				writeFile(
 					file: dstScript,
 					text: contentscript
 				)
 
-				logger.trace("listScripts/${stage}/${target}", "Change mode of ${dstScript} to allow execution")
+				logger.trace('listScripts', "Change mode of ${dstScript} to allow execution")
 				sh "chmod +x ${dstScript}"
 			}
 
-			logger.debug("listScripts/${stage}/${target}", 'Add the path to the script in the final list to be returned')
-			logger.debug("listScripts/${stage}/${target}", "Script list content is now = ${scriptList.toString()}")
+			logger.debug('listScripts', 'Add the path to the script in the final list to be returned')
+			logger.debug('listScripts', "Script list content is now = ${scriptList.toString()}")
 			scriptList += dstScript
 		}
 	}
@@ -77,39 +77,39 @@ def listScripts(stage, scripts, target) {
 
 // Parse task as Closure of (list of) String and return a List of step(s)
 def call (stage, task, target) {
-	logger.debug("${stage}/${target}", 'Retrieving config')
+	logger.debug('Retrieving config')
 	def config = lazyConfig()
 
-	logger.debug("${stage}/${target}", 'Collect steps to be resolved')
+	logger.debug('Collect steps to be resolved')
 	def steps = []
 	if (task instanceof Closure) {
-		logger.trace("${stage}/${target}", "Task is a Closure = ${task.toString()}")
+		logger.trace("Task is a Closure = ${task.toString()}")
 		// If task is a Closure, just add it in the step list
 		steps += task
 	} else {
-		logger.debug("${stage}/${target}", 'Prepare shell scripts from (list of) String')
+		logger.debug('Prepare shell scripts from (list of) String')
 		def scripts = []
 		if (task instanceof List) {
-			logger.trace("${stage}/${target}", "Task is a List (${task.toString()})")
+			logger.trace("Task is a List (${task.toString()})")
 			scripts = listScripts(stage, task, target)
 		} else if (task instanceof String) {
-			logger.trace("${stage}/${target}", "Task is a String (${task.toString()})")
+			logger.trace("Task is a String (${task.toString()})")
 			scripts = listScripts(stage, [ task ], target)
 		} else {
-			logger.error("${stage}/${target}", 'Give up if not a Closure, not a List and not a String!')
+			logger.error('Give up if not a Closure, not a List and not a String!')
 			def err = "${stage}/${target} No idea what to do with task = ${task.toString()}"
 			logger.fatal(err)
 			error err.toString()
 		}
 
 		// Collect all scripts as shell steps
-		logger.trace("${stage}/${target}", "Task was referring to {scripts.size()} scripts (${scripts})")
+		logger.trace("Task was referring to {scripts.size()} scripts (${scripts})")
 		scripts.each { script ->
 			steps += { sh "${config.sdir}/${stage}/${script}" }
 		}
 	}
-	logger.trace("${stage}/${target}", "Task has been converted in {steps.size()} steps (${steps.toString()})")
+	logger.trace("Task has been converted in ${steps.size()} steps (${steps.toString()})")
 
-	logger.debug("${stage}/${target}", 'Return list of resolved steps')
+	logger.debug('Return list of resolved steps')
 	return steps
 }

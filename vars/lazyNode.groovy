@@ -40,33 +40,40 @@ def call(stage, index, task, dist = null) {
 	def branch = [
 		(name): {
 			node(label: label) {
+				logger.info('Started')
 				try {
-					logger.debug(name, 'Checkout SCM')
+					logger.debug('Checkout SCM')
 					checkout scm
 					ansiColor('xterm') {
-						logger.debug(name, 'Execute pre closure first')
-						logger.trace(name, "Post closure = ${task.pre.toString()}")
-						if (task.pre) task.pre.call()
+						if (task.pre) {
+							logger.debug('Execute pre closure first')
+							logger.trace("Post closure = ${task.pre.toString()}")
+							task.pre.call()
+						}
 
+						logger.trace("Processing dist = ${dist.toString()}")
 						if (dist) {
-							logger.debug(name, 'Docker required - Calling lazyDocker')
+							logger.debug('Docker required - Calling lazyDocker')
 							lazyDocker(stage, task.run, dist, task.args)
 						} else {
-							logger.debug(name, 'Docker not required - Calling lazyStep')
+							logger.debug('Docker not required - Calling lazyStep')
 							lazyStep(stage, task.run, task.on).each { step ->
 								step()
 							}
 						}
 
-						logger.debug(name, 'Execute post closure at the end')
-						logger.trace(name, "Post closure = ${task.post.toString()}")
-						if (task.post) task.post.call()
+						if (task.post) {
+							logger.debug('Execute post closure at the end')
+							logger.trace("Post closure = ${task.post.toString()}")
+							task.post.call()
+						}
 					}
 				} catch (e) {
 					error e.toString()
 				} finally {
 					step([$class: 'WsCleanup'])
 				}
+				logger.info('Finished')
 			}
 		}
 	]

@@ -88,7 +88,7 @@ def call (body) {
 
 			logger.debug(params.name, 'Walking in task.in to populate branches')
 			task.in.each { dist ->
-				logger.trace("${params.name}/${index}/${dist}", "Processing dist = ${dist.toString()}")
+				logger.trace("${params.name}/${index}/${task.on}", "Processing dist = ${dist.toString()}")
 				branches += lazyNode(params.name, index++, task, dist)
 			}
 		}
