@@ -28,7 +28,6 @@ def call (body) {
 	def params = [
 		name:		null,
 		tasks:		[],
-		dockerArgs:	'',
 	]
 	body.resolveStrategy = Closure.DELEGATE_FIRST
 	body.delegate = params
@@ -57,87 +56,45 @@ def call (body) {
 	stage(Character.toUpperCase(params.name.charAt(0)).toString() + params.name.substring(1)) {
 		logger.info(params.name, "Started")
 
-		// Collect all tasks in a Map of pipeline branches (as Closure) to be run in parallel
+		logger.debug(params.name, 'Convert a single task in a List before walk in')	
+		def tasks = (params.tasks instanceof List) ? params.tasks : [ params.tasks ]
+		
+		logger.debug(params.name, 'Collect all tasks in a Map of pipeline branches (as Closure) to be run in parallel')
 		def branches = [:]
 		def index = 1
 
-		params.tasks.each { task ->
-			// Lookup node label to be used for this task bloc
-			def label = config.labels.default
-			if (task.on) {
-				label = config.labels[task.on]
-			} else if (task.inside) {
-				label = config.labels.docker
-			}
-
-			// Prepare List of dists to be used for this task block
-			def dists = []
-			if (task.inside == '*') {
+		tasks.each { task ->
+			logger.debug(params.name, 'Add possible missing keys to the task Map')
+			logger.trace(params.name, "Task content before = ${task.dump()}")
+			task = [
+				run:	{ error 'Nothing to run' },
+				on:		'default',
+				pre:	null,
+				post:	null,
+				in:		[ null, ],
+				args:	'',
+			] + task
+			logger.trace(params.name, "Task content after = ${task.dump()}")
+			
+			logger.debug(params.name, 'Prepare the list of dists to be used for this task block')
+			if (task.in == '*') {
 				if (config.dists) {
 					logger.debug(params.name, "Expanding '*' with configured dists (${config.dists})")
-					dists = config.dists
+					task.in = config.dists
 				} else {
 					error "Using '*' as value for inside key requires dists to be configured"
 				}
-			} else if (task.inside) {
-				dists = task.inside
 			}
 
-			// FIXME: Must be possible to fold the following conditionnal blocks in a simpler one
-			if (dists) {
-				// If inside docker, keeps adding each dist as a new branch block
-				dists.each { dist ->
-					if (!config.labels['docker']) {
-						error "Can not find any label value for key = docker"
-					}
-					def branch = "${params.name}/${dist}/${index++}"
-					logger.info(branch, "Preparing to branch on agent with label = ${config.labels.docker}")
-					branches += [
-						(branch): {
-							node(label: config.labels.docker) {
-								checkout scm
-								try {
-									lazyDocker(params.name, task, dist, params.dockerArgs)
-								} catch (e) {
-									error e.toString()
-								} finally {
-									step([$class: 'WsCleanup'])
-								}
-							}
-						}
-					]
-				}
-			} else {
-				// If not, just add the branch block
-				def target = task.on ? task.on : 'default'
-				if (!config.labels[target]) {
-					error "Can not find any node with label = ${target}"
-				}
-				def branch = "${params.name}/${target}/${index++}"
-				logger.info(branch, "Preparing to branch on agent with label = ${config.labels[target]}")
-				branches += [
-					(branch): {
-						node(label: config.labels[target]) {
-							checkout scm
-							try {
-								// Execute each steps
-								lazyStep(params.name, task.exec, target).each { step ->
-									step ()
-								}
-							} catch (e) {
-								error e.toString()
-							} finally {
-								step([$class: 'WsCleanup'])
-							}
-						}
-					}
-				]
+			logger.debug(params.name, 'Walking in task.in to populate branches')
+			task.in.each { dist ->
+				logger.trace("${params.name}/${index}/${dist}", "Processing dist = ${dist.toString()}")
+				branches += lazyNode(params.name, index++, task, dist)
 			}
 		}
 
 		// Now we can execute block(s) in parallel
 		parallel(branches)
-		
 		logger.info(params.name, 'Finished')
 	}
 }

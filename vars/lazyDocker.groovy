@@ -64,13 +64,11 @@ def buildImage(stage, dist, args = '', filename = 'Dockerfile') {
 	def uid = sh(returnStdout: true, script: 'id -u').trim()
 	def gid = sh(returnStdout: true, script: 'id -g').trim()
 	
-	ansiColor('xterm') {
-		withEnv(["UID=${uid}", "GID=${gid}"]) {
-			return docker.build(
-				"${config.name}-${stage}-${dist}:${config.branch}",
-				"--build-arg dir=${stage} --build-arg uid=${env.UID} --build-arg gid=${env.GID} -f ${config.sdir}/${dstDockerfile} ${config.sdir}"
-			)
-		}
+	withEnv(["UID=${uid}", "GID=${gid}"]) {
+		return docker.build(
+			"${config.name}-${stage}-${dist}:${config.branch}",
+			"--build-arg dir=${stage} --build-arg uid=${env.UID} --build-arg gid=${env.GID} -f ${config.sdir}/${dstDockerfile} ${config.sdir}"
+		)
 	}
 }
 
@@ -80,29 +78,21 @@ def call (stage, task, dist, args = '') {
 
 	logger.info('Started')
 
-	// Execute pre closure first
-	if (task.preout) task.preout.call()
-
 	// Prepare steps without executing
-	def steps = lazyStep(stage, task.exec, dist)
+	def steps = lazyStep(stage, task, dist)
 	
 	// Build the relevant Docker image
 	def imgDocker = buildImage(stage, dist)
 
 	// Run each shell scripts as task inside the Docker
 	imgDocker.inside(args) {
-		ansiColor('xterm') {
-			withEnv(["DIST=${dist}"]) {
-				// Execut each step
-				steps.each { step ->
-					step()
-				}
+		withEnv(["DIST=${dist}"]) {
+			// Execut each step
+			steps.each { step ->
+				step()
 			}
 		}
 	}
-
-	// Execute post closure at the end
-	if (task.postout) task.postout.call()
 
 	logger.info('Finished')
 }

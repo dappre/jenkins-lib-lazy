@@ -30,7 +30,7 @@ def mapFromText(String text) {
 	logger.debug('mapFromText', 'Convert list of key/pair from String to Map')
 	logger.trace('mapFromText', "Parse from String = " + text.replaceAll("\\\n", "\\\\\\n"))
 	Map map = [:]
-	text.findAll(/([^=\n]+)=([^\n]+)/) { group ->
+	text.findAll(/([^=\n\s,]+)=([^\n\s,]+)/) { group ->
 		// REM: In Groovy console, the Closure parameters are 'full, key, value ->'
 		def key = group[1]
 		def value = group[2]
@@ -50,12 +50,12 @@ def call(Map args = [:]) {
 		logger.debug('init', 'Preparing config from env if available or hardcoded defaults if needed, squashed with args if set')
 		args = [
 			name:		env.JOB_NAME,
-			sdir:		env.LAZY_SDIR ? env.LAZY_SDIR : 'lazy-pipeline',
+			sdir:		env.LAZY_SDIR ?: 'lazyDir',
 			stages:		env.LAZY_STAGES ? env.LAZY_STAGES.split("/n") : [],
 			flags:		env.LAZY_FLAGS ? env.LAZY_FLAGS.split("/n") : [],
 			labels:		env.LAZY_LABELS ? mapFromText(env.LAZY_LABELS) : [ default: 'master' ],
 			dists:		env.LAZY_DISTS ? env.LAZY_DISTS.split("/n") : [],
-			verbosity:	env.LAZY_VERBOSITY ? env.LAZY_VERBOSITY : 'INFO',
+			verbosity:	env.LAZY_VERBOSITY ?: 'INFO',
 			] + args
 
 		logger.debug('init', 'Generate and retrieve user altered config')
