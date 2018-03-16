@@ -23,72 +23,72 @@ package org.jenkins.ci.lazy
  
 class Logger implements Serializable { 
 
-	// Define property for log levels (default first for parameter choice)
-	private static final Map levels = [
-	    INFO:	2,
-	    TRACE:	0,
-	    DEBUG:	1,
-	    WARN:	3,
-	    ERROR:	4,
-		FATAL:	5,
-	]
-	private static String globalLevel = 'INFO'
-	private final String level = null
+    // Define property for log levels (default first for parameter choice)
+    private static final Map levels = [
+        INFO:   2,
+        TRACE:  0,
+        DEBUG:  1,
+        WARN:   3,
+        ERROR:  4,
+        FATAL:  5,
+    ]
+    private static String globalLevel = 'INFO'
+    private final String level = null
 
-	// Define field for caller class and its name
-	private caller = null
-	final String name = null
+    // Define field for caller class and its name
+    private caller = null
+    final String name = null
 
-	public Logger (caller, level = null) {
-		this.caller = caller
-		this.name = caller.class.name
-		if (level) {
-			this.level = level
-		}
-	}
-
-  	// Getter for all levels
-  	public List getLevels() {
-    	return levels.keySet() as List
+    public Logger (caller, level = null) {
+        this.caller = caller
+        this.name = caller.class.name
+        if (level) {
+            this.level = level
+        }
     }
 
-	// Setter for global shared level
-	public void setLevel(level) {
-		this.globalLevel = level
-	}
+      // Getter for all levels
+      public List getLevels() {
+        return levels.keySet() as List
+    }
 
-	// Getter for active level
-	public String getLevel() {
-		return this.level ? this.level : globalLevel
-	}
+    // Setter for global shared level
+    public void setLevel(level) {
+        this.globalLevel = level
+    }
 
-	public void trace(sub = null, msg) {
-	    log(sub, msg, 'TRACE')
-	}
+    // Getter for active level
+    public String getLevel() {
+        return this.level ? this.level : globalLevel
+    }
 
-	public void debug(sub = null, msg) {
-	    log(sub, msg, 'DEBUG')
-	}
+    public void trace(sub = null, msg) {
+        log(sub, msg, 'TRACE')
+    }
 
-	public void info(sub = null, msg) {
-	    log(sub, msg, 'INFO')
-	}
+    public void debug(sub = null, msg) {
+        log(sub, msg, 'DEBUG')
+    }
 
-	public void warn(sub = null, msg) {
-	    log(sub, msg, 'WARN')
-	}
+    public void info(sub = null, msg) {
+        log(sub, msg, 'INFO')
+    }
 
-	public void error(sub = null, msg) {
-	    log(sub, msg, 'ERROR')
-	}
+    public void warn(sub = null, msg) {
+        log(sub, msg, 'WARN')
+    }
 
-	public void fatal(sub = null, msg) {
-	    log(sub, msg, 'FATAL')
-	}
+    public void error(sub = null, msg) {
+        log(sub, msg, 'ERROR')
+    }
 
-	private void log(sub = null, msg, level) {
-	    if (levels[level] >= levels[getLevel()]) {
-	        caller.echo "${level} ${name}" + (sub ? "[${sub}]" : "") + " - ${msg}"
-	    }
-	}
+    public void fatal(sub = null, msg) {
+        log(sub, msg, 'FATAL')
+    }
+
+    private void log(sub = null, msg, level) {
+        if (levels[level] >= levels[getLevel()]) {
+            caller.echo "${level} ${name}" + (sub ? "[${sub}]" : "") + " - ${msg}"
+        }
+    }
 }
