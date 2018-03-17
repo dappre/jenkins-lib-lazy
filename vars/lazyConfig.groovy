@@ -71,7 +71,10 @@ def call(Map args = [:]) {
                 string(name: 'libExtBranch', defaultValue: 'master', description: 'Git branch for the Extended shared library'),
                 string(name: 'libExtCredId', defaultValue: 'none', description: 'Credentials to access the Extended shared library'),
                 booleanParam(name: 'extended', defaultValue: false, description: 'Enable extended stages (requires extended lib)'),
-            ])
+            ]),
+			buildDiscarder(
+				logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')
+			)
         ])
 
         logger.debug('init', 'Create config map based on the user parameters and the prepared ones')
