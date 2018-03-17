@@ -51,20 +51,21 @@ def call(Map args = [:]) {
         args = [
             name:        env.JOB_NAME,
             sdir:        env.LAZY_SDIR ?: 'lazyDir',
-            stages:      env.LAZY_STAGES ? env.LAZY_STAGES.split("/n") : [],
-            flags:       env.LAZY_FLAGS ? env.LAZY_FLAGS.split("/n") : [],
+            env:         env.LAZY_ENV ? env.LAZY_ENV.split(",") : [],
             labels:      env.LAZY_LABELS ? mapFromText(env.LAZY_LABELS) : [ default: 'master' ],
-            dists:       env.LAZY_DISTS ? env.LAZY_DISTS.split("/n") : [],
+            dists:       env.LAZY_DISTS ? env.LAZY_DISTS.split(",") : [],
+            stages:      env.LAZY_STAGES ? env.LAZY_STAGES.split(",") : [],
             verbosity:   env.LAZY_VERBOSITY ?: 'INFO',
             ] + args
-
+		logger.trace('init', "Initial config = ${params.toString()}")
+			
         logger.debug('init', 'Generate and retrieve user altered config')
         properties([
             parameters([
-                textParam(name: 'stages', defaultValue: args.stages.join("\n"), description: 'List of stages to go through (default: blank = all)'),
-                textParam(name: 'flags', defaultValue: args.flags.join("\n"), description: 'List of custom flags to be set (default: blank = none)'),
+                textParam(name: 'env', defaultValue: args.env.join("\n"), description: 'List of custom environment variables to be set (default: blank = none)'),
                 textParam(name: 'labels', defaultValue: args.labels.collect{ it }.join("\n"), description: 'Map of node label to use for docker and other targeted agent'),
                 textParam(name: 'dists', defaultValue: args.dists.join("\n"), description: 'List of distribution to use inside docker'),
+                textParam(name: 'stages', defaultValue: args.stages.join("\n"), description: 'List of stages to go through (default: blank = all)'),
                 choice(name: 'verbosity', choices: logger.getLevels().join("\n"), defaultValue: 'INFO', description: 'Control verbosity (where implemented)'),
                 // Parameters to load/enable the extended library
                 string(name: 'libExtRemote', defaultValue: 'https://github.com/digital-me/jenkins-lib-lazy-ext.git', description: 'Git URL of the extended shared library'),
@@ -76,15 +77,16 @@ def call(Map args = [:]) {
 				logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')
 			)
         ])
+		logger.trace('init', "Parameters content = ${params.toString()}")
 
         logger.debug('init', 'Create config map based on the user parameters and the prepared ones')
         config.putAll([
             name        : args.name,
             sdir        : args.sdir,
-            stages      : params.stages && params.stages.trim() != '' ? params.stages.trim().split("\n") : args.stages,
-            flags       : params.flags && params.flags.trim() != '' ? params.flags.trim().split("\n") : args.flags,
+            env         : params.env && params.env.trim() != '' ? params.env.trim().split("\n") : args.env,
             labels      : params.labels && params.labels.trim() != '' ? mapFromText(params.labels.trim()) : args.labels,
             dists       : params.dists && params.dists.trim() != '' ? params.dists.trim().split("\n") : args.dists,
+            stages      : params.stages && params.stages.trim() != '' ? params.stages.trim().split("\n") : args.stages,
             verbosity   : params.verbosity && params.verbosity.trim() != '' ? params.verbosity.trim() : args.verbosity,
             extended    : true,
             branch      : env.BRANCH_NAME,

@@ -44,29 +44,31 @@ def call(stage, index, task, dist = null) {
                 try {
                     logger.debug('Checkout SCM')
                     checkout scm
-                    ansiColor('xterm') {
-                        if (task.pre) {
-                            logger.debug('Execute pre closure first')
-                            logger.trace("Post closure = ${task.pre.toString()}")
-                            task.pre.call()
-                        }
-
-                        logger.trace("Processing dist = ${dist.toString()}")
-                        if (dist) {
-                            logger.debug('Docker required - Calling lazyDocker')
-                            lazyDocker(stage, task.run, dist, task.args)
-                        } else {
-                            logger.debug('Docker not required - Calling lazyStep')
-                            lazyStep(stage, task.run, task.on).each { step ->
-                                step()
-                            }
-                        }
-
-                        if (task.post) {
-                            logger.debug('Execute post closure at the end')
-                            logger.trace("Post closure = ${task.post.toString()}")
-                            task.post.call()
-                        }
+					withEnv(config.env as List) {
+                    	ansiColor('xterm') {
+	                        if (task.pre) {
+	                            logger.debug('Execute pre closure first')
+	                            logger.trace("Post closure = ${task.pre.toString()}")
+	                            task.pre.call(env)
+	                        }
+	
+	                        logger.trace("Processing dist = ${dist.toString()}")
+	                        if (dist) {
+	                            logger.debug('Docker required - Calling lazyDocker')
+	                            lazyDocker(stage, task.run, dist, task.args)
+	                        } else {
+	                            logger.debug('Docker not required - Calling lazyStep')
+	                            lazyStep(stage, task.run, task.on).each { step ->
+	                                step(env)
+	                            }
+	                        }
+	
+	                        if (task.post) {
+	                            logger.debug('Execute post closure at the end')
+	                            logger.trace("Post closure = ${task.post.toString()}")
+	                            task.post.call(env)
+	                        }
+                    	}
                     }
                 } catch (e) {
                     error e.toString()
