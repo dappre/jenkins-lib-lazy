@@ -25,76 +25,76 @@ import org.jenkins.ci.lazy.Logger
 @Field private logger = new Logger(this)
 
 def call (body) {
-	def params = [
-		name:		null,
-		tasks:		[],
-	]
-	body.resolveStrategy = Closure.DELEGATE_FIRST
-	body.delegate = params
-	body()
+    def params = [
+        name:   null,
+        tasks:  [],
+    ]
+    body.resolveStrategy = Closure.DELEGATE_FIRST
+    body.delegate = params
+    body()
 
-	logger.debug(params.name, 'Retrieving config')
-	def config = lazyConfig()
+    logger.debug(params.name, 'Retrieving config')
+    def config = lazyConfig()
 
-	// Check parameters and config for possible error
-	def err = null
-	if (!params.name) {
-		err = 'Stage always needs a name'
-	} else if (!params.tasks) {
-		err = 'Stage always needs some tasks'
-	}
-	if (err) {
-		error err
-	}
+    // Check parameters and config for possible error
+    def err = null
+    if (!params.name) {
+        err = 'Stage always needs a name'
+    } else if (!params.tasks) {
+        err = 'Stage always needs some tasks'
+    }
+    if (err) {
+        error err
+    }
 
-	// Skip stage if not listed in the config
-	if (config.stages && !config.stages.contains(params.name)) {
-		logger.warn(params.name, "Skipped because (config.stages.${params.name} is not set)")
-		return 0
-	}
+    // Skip stage if not listed in the config
+    if (config.stages && !config.stages.contains(params.name)) {
+        logger.warn(params.name, "Skipped because (config.stages.${params.name} is not set)")
+        return 0
+    }
 
-	stage(Character.toUpperCase(params.name.charAt(0)).toString() + params.name.substring(1)) {
-		logger.info(params.name, "Started")
+    stage(Character.toUpperCase(params.name.charAt(0)).toString() + params.name.substring(1)) {
+        logger.info(params.name, "Started")
 
-		logger.debug(params.name, 'Convert a single task in a List before walk in')	
-		def tasks = (params.tasks instanceof List) ? params.tasks : [ params.tasks ]
-		
-		logger.debug(params.name, 'Collect all tasks in a Map of pipeline branches (as Closure) to be run in parallel')
-		def branches = [:]
-		def index = 1
+        logger.debug(params.name, 'Convert a single task in a List before walk in')    
+        def tasks = (params.tasks instanceof List) ? params.tasks : [ params.tasks ]
+        
+        logger.debug(params.name, 'Collect all tasks in a Map of pipeline branches (as Closure) to be run in parallel')
+        def branches = [:]
+        def index = 1
 
-		tasks.each { task ->
-			logger.debug(params.name, 'Add possible missing keys to the task Map')
-			logger.trace(params.name, "Task content before = ${task.dump()}")
-			task = [
-				run:	{ error 'Nothing to run' },
-				on:		'default',
-				pre:	null,
-				post:	null,
-				in:		[ null, ],
-				args:	'',
-			] + task
-			logger.trace(params.name, "Task content after = ${task.dump()}")
-			
-			logger.debug(params.name, 'Prepare the list of dists to be used for this task block')
-			if (task.in == '*') {
-				if (config.dists) {
-					logger.debug(params.name, "Expanding '*' with configured dists (${config.dists})")
-					task.in = config.dists
-				} else {
-					error "Using '*' as value for inside key requires dists to be configured"
-				}
-			}
+        tasks.each { task ->
+            logger.debug(params.name, 'Add possible missing keys to the task Map')
+            logger.trace(params.name, "Task content before = ${task.dump()}")
+            task = [
+                run:    { error 'Nothing to run' },
+                on:     'default',
+                pre:    null,
+                post:   null,
+                in:     [ null, ],
+                args:   '',
+            ] + task
+            logger.trace(params.name, "Task content after = ${task.dump()}")
+            
+            logger.debug(params.name, 'Prepare the list of dists to be used for this task block')
+            if (task.in == '*') {
+                if (config.dists) {
+                    logger.debug(params.name, "Expanding '*' with configured dists (${config.dists})")
+                    task.in = config.dists
+                } else {
+                    error "Using '*' as value for inside key requires dists to be configured"
+                }
+            }
 
-			logger.debug(params.name, 'Walking in task.in to populate branches')
-			task.in.each { dist ->
-				logger.trace("${params.name}/${index}/${dist}", "Processing dist = ${dist.toString()}")
-				branches += lazyNode(params.name, index++, task, dist)
-			}
-		}
+            logger.debug(params.name, 'Walking in task.in to populate branches')
+            task.in.each { dist ->
+                logger.trace("${params.name}/${index}/${task.on}", "Processing dist = ${dist.toString()}")
+                branches += lazyNode(params.name, index++, task, dist)
+            }
+        }
 
-		// Now we can execute block(s) in parallel
-		parallel(branches)
-		logger.info(params.name, 'Finished')
-	}
+        // Now we can execute block(s) in parallel
+        parallel(branches)
+        logger.info(params.name, 'Finished')
+    }
 }
