@@ -27,6 +27,7 @@ import org.jenkins.ci.lazy.Logger
 def call (body) {
     def params = [
         name:   null,
+		input:  null,
         tasks:  [],
     ]
     body.resolveStrategy = Closure.DELEGATE_FIRST
@@ -56,6 +57,9 @@ def call (body) {
     stage(Character.toUpperCase(params.name.charAt(0)).toString() + params.name.substring(1)) {
         logger.info(params.name, "Started")
 
+		logger.debug(params.name, 'Process input first')
+		def input = params.input ? input(params.input) : null
+			
         logger.debug(params.name, 'Convert a single task in a List before walk in')    
         def tasks = (params.tasks instanceof List) ? params.tasks : [ params.tasks ]
         
@@ -89,7 +93,7 @@ def call (body) {
             logger.debug(params.name, 'Walking in task.in to populate branches')
             task.in.each { dist ->
                 logger.trace("${params.name}/${index}/${task.on}", "Processing dist = ${dist.toString()}")
-                branches += lazyNode(params.name, index++, task, dist)
+                branches += withEnv(["LAZY_INPUT=${input}"]) { lazyNode(params.name, index++, task, dist) }
             }
         }
 
