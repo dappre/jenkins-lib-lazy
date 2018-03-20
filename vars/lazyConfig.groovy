@@ -57,6 +57,7 @@ def call(Map args = [:]) {
             stages:      env.LAZY_STAGES ? env.LAZY_STAGES.split(",") : [],
             verbosity:   env.LAZY_VERBOSITY ?: 'INFO',
             nopoll:      env.LAZY_NOPOLL ?: 'master',
+            branch:      env.BRANCH_NAME ?: env.LAZY_BRANCH ?: 'master',
             ] + args
 		logger.trace('init', "Initial config = ${params.toString()}")
 			
@@ -87,7 +88,7 @@ def call(Map args = [:]) {
             verbosity   : params.verbosity && params.verbosity.trim() != '' ? params.verbosity.trim() : args.verbosity,
             nopoll      : args.nopoll,
             extended    : true,
-            branch      : env.BRANCH_NAME,
+            branch      : args.branch,
         ])
         logger.debug('init', 'Set default logging level from config')
         logger.setLevel(config.verbosity)
