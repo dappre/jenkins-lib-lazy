@@ -27,7 +27,9 @@ import org.jenkins.ci.lazy.Logger
 def call (body) {
     def params = [
         name:   null,
+        input:  null,
         tasks:  [],
+        env: this.env,
     ]
     body.resolveStrategy = Closure.DELEGATE_FIRST
     body.delegate = params
@@ -56,9 +58,13 @@ def call (body) {
     stage(Character.toUpperCase(params.name.charAt(0)).toString() + params.name.substring(1)) {
         logger.info(params.name, "Started")
 
-        logger.debug(params.name, 'Convert a single task in a List before walk in')    
-        def tasks = (params.tasks instanceof List) ? params.tasks : [ params.tasks ]
-        
+        logger.debug(params.name, 'Process input first')
+        def input = params.input ? input(params.input) : null
+        logger.trace(params.name, "Input = ${input}")
+
+        logger.debug(params.name, 'Convert a single task in a List before walk in')
+        def tasks = (params.tasks instanceof List) ? params.tasks : [params.tasks]
+
         logger.debug(params.name, 'Collect all tasks in a Map of pipeline branches (as Closure) to be run in parallel')
         def branches = [:]
         def index = 1
@@ -71,11 +77,11 @@ def call (body) {
                 on:     'default',
                 pre:    null,
                 post:   null,
-                in:     [ null, ],
+                in:     [null,],
                 args:   '',
             ] + task
             logger.trace(params.name, "Task content after = ${task.dump()}")
-            
+
             logger.debug(params.name, 'Prepare the list of dists to be used for this task block')
             if (task.in == '*') {
                 if (config.dists) {
@@ -93,8 +99,10 @@ def call (body) {
             }
         }
 
-        // Now we can execute block(s) in parallel
-        parallel(branches)
+        logger.debug(params.name, 'Execute block(s) in parallel with input injected in environment')
+        withEnv(["LAZY_INPUT=${input}"]) {
+            parallel(branches)
+        }
         logger.info(params.name, 'Finished')
     }
 }
