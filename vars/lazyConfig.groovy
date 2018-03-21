@@ -57,6 +57,7 @@ def call(Map args = [:]) {
             stages:      env.LAZY_STAGES ? env.LAZY_STAGES.split(",") : [],
             verbosity:   env.LAZY_VERBOSITY ?: 'INFO',
             nopoll:      env.LAZY_NOPOLL ?: 'master',
+            cronpoll:    env.LAZY_CRONPOLL ?: '*/10 * * * *'
             branch:      env.BRANCH_NAME ?: env.LAZY_BRANCH ?: 'master',
             ] + args
 		logger.trace('init', "Initial config = ${params.toString()}")
@@ -87,6 +88,7 @@ def call(Map args = [:]) {
             stages      : params.stages && params.stages.trim() != '' ? params.stages.trim().split("\n") : args.stages,
             verbosity   : params.verbosity && params.verbosity.trim() != '' ? params.verbosity.trim() : args.verbosity,
             nopoll      : args.nopoll,
+            cronpoll    : args.cronpoll,
             extended    : true,
             branch      : args.branch,
         ])
@@ -100,8 +102,8 @@ def call(Map args = [:]) {
         )
 
         if (env.BRANCH_NAME !=~ /${config.nopoll}/) {
-            logger.debug('init', 'Add pollSCM trigger property')
-            props += pipelineTriggers([pollSCM('*/5 * * * *')])
+            logger.info('init', 'Add pollSCM trigger property')
+            props += pipelineTriggers([pollSCM(config.cronpoll)])
         }
 
         logger.debug('init', "Processing ${props.size()} properties")
