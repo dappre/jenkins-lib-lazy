@@ -104,6 +104,9 @@ def call(Map args = [:]) {
         logger.debug('init', 'Disable concurrent builds by default')
         props += disableConcurrentBuilds()
 
+        logger.debug('init', 'Disable multibranch indexing')
+        props += overrideIndexTriggers(true)
+
         if (!(env.BRANCH_NAME ==~ /${config.nopoll}/)) {
             logger.info('init', 'Add pollSCM trigger property')
             props += pipelineTriggers([pollSCM(config.cronpoll)])
