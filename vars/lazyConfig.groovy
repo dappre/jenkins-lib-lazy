@@ -57,7 +57,7 @@ def call(Map args = [:]) {
             stages:      env.LAZY_STAGES ? env.LAZY_STAGES.split(",") : [],
             verbosity:   env.LAZY_VERBOSITY ?: 'INFO',
             nopoll:      env.LAZY_NOPOLL ?: 'master',
-            cronpoll:    env.LAZY_CRONPOLL ?: '*/10 * * * *'
+            cronpoll:    env.LAZY_CRONPOLL ?: '*/10 * * * *',
             branch:      env.BRANCH_NAME ?: env.LAZY_BRANCH ?: 'master',
             ] + args
 		logger.trace('init', "Initial config = ${params.toString()}")
