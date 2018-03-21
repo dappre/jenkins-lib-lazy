@@ -101,7 +101,7 @@ def call(Map args = [:]) {
             logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')
         )
 
-        if (env.BRANCH_NAME !=~ /${config.nopoll}/) {
+        if (!(env.BRANCH_NAME ==~ /${config.nopoll}/)) {
             logger.info('init', 'Add pollSCM trigger property')
             props += pipelineTriggers([pollSCM(config.cronpoll)])
         }
