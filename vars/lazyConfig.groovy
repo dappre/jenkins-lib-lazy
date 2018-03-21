@@ -57,7 +57,7 @@ def call(Map args = [:]) {
             stages:      env.LAZY_STAGES ? env.LAZY_STAGES.split(",") : [],
             verbosity:   env.LAZY_VERBOSITY ?: 'INFO',
             nopoll:      env.LAZY_NOPOLL ?: 'master',
-            cronpoll:    env.LAZY_CRONPOLL ?: '*/10 * * * *',
+            cronpoll:    env.LAZY_CRONPOLL ?: 'H/10 * * * *',
             branch:      env.BRANCH_NAME ?: env.LAZY_BRANCH ?: 'master',
             ] + args
 		logger.trace('init', "Initial config = ${params.toString()}")
@@ -101,7 +101,13 @@ def call(Map args = [:]) {
             logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')
         )
 
-        if (env.BRANCH_NAME !=~ /${config.nopoll}/) {
+        logger.debug('init', 'Disable concurrent builds by default')
+        props += disableConcurrentBuilds()
+
+        logger.debug('init', 'Disable multibranch indexing')
+        props += overrideIndexTriggers(true)
+
+        if (!(env.BRANCH_NAME ==~ /${config.nopoll}/)) {
             logger.info('init', 'Add pollSCM trigger property')
             props += pipelineTriggers([pollSCM(config.cronpoll)])
         }
