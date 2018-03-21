@@ -99,7 +99,7 @@ def call(Map args = [:]) {
             logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')
         )
 
-        if (env.BRANCH_NAME !=~ /${config.nopoll}}/) {
+        if (env.BRANCH_NAME !=~ /${config.nopoll}/) {
             logger.debug('init', 'Add pollSCM trigger property')
             props += pipelineTriggers([pollSCM('*/5 * * * *')])
         }
