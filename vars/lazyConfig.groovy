@@ -100,7 +100,7 @@ def call(Map args = [:]) {
         )
 
         if (env.BRANCH_NAME !=~ /${config.nopoll}/) {
-            logger.debug('init', 'Add pollSCM trigger property')
+            logger.info('init', 'Add pollSCM trigger property')
             props += pipelineTriggers([pollSCM('*/5 * * * *')])
         }
 
