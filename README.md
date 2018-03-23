@@ -18,7 +18,7 @@ chances are you will either have to:
 So the idea of lazyLib is to define some steps/scripts to be run on some nodes,
 possibly inside containers, without having to re-invent the wheel each time.
 
-## Components
+## Componens
 - [lazyConfig](vars/lazyConfig.groovy): wrapper for properties and parameters steps
 - [lazyStage](vars/lazyStage.groovy): wrapper for stage step using lazyNode in parallel
 - [lazyNode](vars/lazyNode.groovy): wrapper for node step using lazyDocker and lazyStep
@@ -29,6 +29,12 @@ possibly inside containers, without having to re-invent the wheel each time.
 
 Only the two first have to be used in the Jenkinsfile.
 The others are either dependencies or optional.
+
+## Requirements
+
+- Jenkins v2.89+ on Linux (Mac should work, but not 'pure' Windows because depending on shell)
+- Docker 1.12.6+ to use lazyDocker
+
 
 ## Usage
 
@@ -87,20 +93,32 @@ It is possible to pass a List of script (or a single ono as a String) rather tha
 ```groovy
 lazyStage {
     name = '<stage_name>'
-    tasks = [ run: [ '<script1.sh>', ... ], on: '<node_label>', ]
+    tasks = [ run: [ '<script>', ... ], on: '<node_label>', ]
     ]
 }
 
 ```
 In this case, lazyLib will lookup for each script in the following locations,
-first in the local repo, then in the resource path of any loaded library.
+first in the local repo, then in the resource path of any loaded library:
 
-1. `<repo_root>/lazyDir/<stage_name>/<script1.sh>`
-2. `<repo_root>lazyDir/<script1.sh>`
-3. `<lib_resources>/lazyDir/<stage_name>/<script1.sh>`
-4. `<lib_resources>/lazyDir/<script1.sh>`
+1. `<repo_root>/<lazyDir>/<stage_name>/<node_label>.<script_name>`
+2. `<repo_root>/<lazyDir>/<stage_name>/<script_name>`
+3. `<repo_root>/<lazyDir>/<node_label>.<script_name>`
+4. `<repo_root>/<lazyDir>/<script_name>`
+5. `<lib_resources>/<lazyDir>/<stage_name>/<node_label>.<script_name>`
+6. `<lib_resources>/<lazyDir>/<stage_name>/<script_name>`
+7. `<lib_resources>/<lazyDir>/<node_label>.<script_name>`
+8. `<lib_resources>/<lazyDir>/<script_name>`
 
-In case from 2 to 4, the script will be copied in lazyDir/<stage_name>/ in the workspace.
+*REM*: In case from 3 to 8, the script will be copied in `lazyDir/<stage_name>/` in the workspace.
+
+Each resolved script will then be executed in sequence, using their absotute path from the workspace,
+and no argument (yet) but with the following environment variables:
+- `lazyLabel="<node_label>"`
+- `lazyDir='lazyDir'` or whatever directory has been configured from [lazyConfig](vars/lazyConfig.groovy)
+- `lazyStage="<stage_name>"`
+
+Those environment variables come in addition of all the one from the configuration/parameters (i.e.: lazyEnv).
 
 #### Docker images
 Steps and scripts can be run inside Docker too.
@@ -109,21 +127,24 @@ lazyStage {
     name = '<stage_name>'
     tasks = [
         pre: { pre_step(<args> },
-        run: '<script1.sh>',
+        run: '<script_name>',
         post: post_step(<args>),
-        in: [ '<docker_label1>', ... ],
+        in: [ '<docker_label>', ... ],
         on: '<node_label>',
     ]
 }
 
 ```
-Each Dockerfile will be lookup and copied same way as described for the shell scripts:
-1. `<repo_root>/lazyDir/<stage_name>/<docker_label1>.Dockerfile`
-2. `<repo_root>lazyDir/<docker_label1>.Dockerfile`
-3. `<lib_resources>/lazyDir/<stage_name>/<docker_label1>.Dockerfile`
-4. `<lib_resources>/lazyDir/<docker_label1>.Dockerfile`
+Each Dockerfile will be looked up and copied same way as for the shell scripts:
 
-Additionaly, the pre and post steps Clorure will be executed, respectively before and after, outside the container.
+1. `<repo_root>/<lazyDir>/<stage_name>/<docker_label>.Dockerfile`
+2. `<repo_root><lazyDir>/<docker_label>.Dockerfile`
+3. `<lib_resources>/<lazyDir>/<stage_name>/<docker_label>.Dockerfile`
+4. `<lib_resources>/<lazyDir>/<docker_label>.Dockerfile`
+
+*Important*: the resolution of the script path will also use <docker_label> in place of <node_label>. So will the lazyLabel variable.
+
+Additionaly, the pre and post Closure steps will be executed outside the container, respectively before and after.
 
 #### Input steps
 You can ask for user input per stage (before entering the node step):
@@ -145,13 +166,14 @@ In case of a single parameter, it will just hold its value. If more than one, it
 
 
 ### TODO
-- Document properly config, env and dynamic parameters
+- Improve documentation of config, env and parameters, as it can be confusing
 - Add support for Fastlane with bundler
-- Add support for Maven and Java 
+- Add support for Maven and Java
 - Support single branch pipeline jobs, maybe disabling dynamic parameters
 - Allow failFast to be defined per config and/or per stage
+- Add examples/templates, possibly in separated repos
 - Avoid required permissions if/when possible
-
+- Add support for Windows nodes
 
 ### Required permissions:
 - staticMethod java.lang.Character toUpperCase char
