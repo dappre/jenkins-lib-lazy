@@ -81,7 +81,7 @@ lazyStage {
 ```
 
 #### Shell scripts
-It is possible to pass a List of script (or a single on as a String) rather than a Closure to be run:
+It is possible to pass a List of script (or a single ono as a String) rather than a Closure to run:
 ```groovy
 lazyStage {
     name = '<stage_name>'
@@ -92,15 +92,16 @@ lazyStage {
 ```
 In this case, lazyLib will lookup for each script in the following locations,
 first in the local repo, then in the resource path of any loaded library.
-1. <repo_root>/lazyDir/<stage_name>/
-2. <repo_root>lazyDir/
-3. <lib_resources>/lazyDir/<stage_name>/
-4. <lib_resources>/lazyDir/
+
+1. <repo_root>/lazyDir/<stage_name>/<script1.sh>
+2. <repo_root>lazyDir/<script1.sh>
+3. <lib_resources>/lazyDir/<stage_name>/<script1.sh>
+4. <lib_resources>/lazyDir/<script1.sh>
+
 In case from 2 to 4, the script will be copied in /lazyDir/<stage_name>/ in the workspace.
 
 #### Docker images
 Steps and scripts can be run inside Docker too.
-Each Dockerfile will be lookup and copied same way as described for the shell scripts above.
 ```groovy
 lazyStage {
     name = '<stage_name>'
@@ -114,6 +115,13 @@ lazyStage {
 }
 
 ```
+Each Dockerfile will be lookup and copied same way as described for the shell scripts:
+1. <repo_root>/lazyDir/<stage_name>/<docker_label1>.Dockerfile
+2. <repo_root>lazyDir/<docker_label1>.Dockerfile
+3. <lib_resources>/lazyDir/<stage_name>/<docker_label1>.Dockerfile
+4. <lib_resources>/lazyDir/<docker_label1>.Dockerfile
+
+Additionaly, the pre and post steps Clorure will be executed, respectively before and after, outside the container.
 
 #### Input steps
 You can ask for user input per stage (before entering the node step):
