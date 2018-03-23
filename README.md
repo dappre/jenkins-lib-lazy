@@ -19,10 +19,11 @@ For instance, if a bunch of your projects use a common shell script of Dockerfil
 - lazyGitPass: wrapper for git command using user/password credential
 - lazyLogger: support levels of logging for the above components
 
-### Basic usage
+## Usage
+### Basic
 
 1. Load the lazyLib and any other libraries from Jenkinsfile
-```
+```groovy
 def libCmn = [
     remote:           'https://code.in.digital-me.nl/git/DEVops/JenkinsLibLazy.git',
     branch:           'master',
@@ -38,10 +39,10 @@ library(
     ])
 )
 ```
-Load your custom and or extra libraries if required (same way as above)
+Load also custom and or extra libraries if required (same way as above)
 
 2. Configure the pipeline with lazyConfig
-```
+```groovy
 lazyConfig(
     name: '<pipeline_name>',
 )
@@ -49,8 +50,8 @@ lazyConfig(
 See lazyConfig for all the available options.
 Most of wich will be available as parameters if the Job is manually triggered 
 
-4. Define stages with lazyStage
-```
+3. Define stages with lazyStage
+```groovy
 lazyStage {
     name = '<stage_name>'
     tasks = [ run: { step1(<args>); ... }, on: '<node_label>', ]
@@ -58,13 +59,10 @@ lazyStage {
 
 ```
 
-5. Add/migrate your shell scripts (optional)
-6. Add/migrate your Dockerfiles (optional)
-
-### Advanced usage
+### Advanced
 #### Multi tasks
 It is possible to pass a List of task rather than a single Map:
-```
+```groovy
 lazyStage {
     name = '<stage_name>'
     tasks = [
@@ -78,7 +76,7 @@ lazyStage {
 
 #### Shell scripts
 It is possible to pass a List of script (or a single on as a String) rather than a Closure to be run:
-```
+```groovy
 lazyStage {
     name = '<stage_name>'
     tasks = [ run: [ '<script1.sh>', ... ], on: '<node_label>', ]
@@ -86,25 +84,34 @@ lazyStage {
 }
 
 ```
-In this case, lazyLib will lookup for each script in the following locations:
-- lazyDir/<stage_name>/
-- lazyDir/
-First in the local repo, then in the resource path of any loaded library.
-If not present 
+In this case, lazyLib will lookup for each script in the following locations,
+first in the local repo, then in the resource path of any loaded library.
+1. <repo_root>/lazyDir/<stage_name>/
+2. <repo_root>lazyDir/
+3. <lib_resources>/lazyDir/<stage_name>/
+4. <lib_resources>/lazyDir/
+In case from 2 to 4, the script will be copied in /lazyDir/<stage_name>/ in the workspace.
 
 #### Docker images
-```
+Steps and scripts can be run inside Docker too.
+Each Dockerfile will be lookup and copied same way as described for the shell scripts above.
+```groovy
 lazyStage {
     name = '<stage_name>'
     tasks = [
-        [ pre: { pre_step(<args> }, run: [ '<script1.sh>', ... ], post: post_step(args), in: [ '<docker_label1>', ... ], on: '<node_label>', ]
+        pre: { pre_step(<args> },
+        run: '<script1.sh>',
+        post: post_step(<args>),
+        in: [ '<docker_label1>', ... ],
+        on: '<node_label>',
     ]
 }
 
 ```
 
 #### Input steps
-```
+You can ask for user input per stage (before entering the node step):
+```groovy
 lazyStage {
     name = '<stage_name>'
     input = [
