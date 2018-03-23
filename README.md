@@ -20,12 +20,13 @@ possibly inside containers, without having to re-invent the wheel each time.
 
 ## Components
 - [lazyConfig](vars/lazyConfig.groovy): wrapper for properties and parameters steps
-- lazyStage: wrapper for stage step using lazyNode in parallel
-- lazyNode: wrapper for node step using lazyDocker and lazyStep
-- lazyDocker: wrapper for docker steps using lazyStep with dynamic resolution of Dockerfile
-- lazyStep: wrapper for shells or any other steps with dynammic resolution of scripts
-- lazyGitPass: wrapper for git command using user/password credential
-- lazyLogger: support levels of logging for the above components
+- [lazyStage](vars/lazyStage.groovy): wrapper for stage step using lazyNode in parallel
+- [lazyNode](vars/lazyNode.groovy): wrapper for node step using lazyDocker and lazyStep
+- [lazyDocker](vars/lazyDocker.groovy): wrapper for docker steps using lazyStep with dynamic resolution of Dockerfile
+- [lazyStep](vars/lazyStep.groovy): wrapper for shells or any other steps with dynammic resolution of scripts
+- [lazyGitPass](vars/lazyGitPass.groovy): wrapper for git command using user/password credential
+- [lazyLogger](src/org/jenkins/ci/lazy/lazyLogger.groovy): support levels of logging for the above components
+Only the two first have to be used in the Jenkinsfile
 
 ## Usage
 
@@ -54,7 +55,7 @@ lazyConfig(
     name: '<pipeline_name>',
 )
 ```
-See lazyConfig for all the available options.
+See [lazyConfig](vars/lazyConfig.groovy) for all the available options.
 Most of wich will be available as parameters if the Job is manually triggered 
 
 3. Define stages with lazyStage
