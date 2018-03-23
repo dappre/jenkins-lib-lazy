@@ -3,12 +3,20 @@ Re-usable shared library to setup lazy Jenkins pipelines
 
 ## Scope
 LazyLib is a collection of global methods, classes and resources to ease the maintenance of Jenkins pipelines.
-The primary goal was to make pipelines from different projects looks pretty much the same,
+
+The primary goal is to make pipelines from different projects looks pretty much the same,
 so they could be easier to understand, design and mostly maintain.
-For instance, if a bunch of your projects use a common shell script of Dockerfile, chances are you will either
-- have to update it in every project separately
+
+The secondary goal is to not repeat code used by the pipelines in each similar projects.
+
+For instance, if a bunch of your projects use a common shell script and/or Dockerfile,
+chances are you will either have to:
+- update those in every project separately
 - implement some step to provision it from a shared lib
-- or both depending if you need to test a specific version of it for one project   
+- do both if you need to add/test a specific feature for one project   
+
+So the idea of lazyLib is to define some steps/scripts to be run on some nodes,
+possibly inside containers, without having to re-invent the wheel each time.
 
 ## Components
 - lazyConfig: wrapper for properties and parameters steps
@@ -19,7 +27,7 @@ For instance, if a bunch of your projects use a common shell script of Dockerfil
 - lazyGitPass: wrapper for git command using user/password credential
 - lazyLogger: support levels of logging for the above components
 
-## Basic usage
+## Usage
 
 1. Load the lazyLib from Jenkinsfile:
 ```groovy
@@ -57,8 +65,8 @@ lazyStage {
 }
 ```
 
-## Advanced usage
-* Multi tasks
+## Advanced features
+#### Multi tasks
 It is possible to pass a List of task rather than a single Map:
 ```groovy
 lazyStage {
@@ -71,7 +79,7 @@ lazyStage {
 }
 ```
 
-* Shell scripts
+#### Shell scripts
 It is possible to pass a List of script (or a single on as a String) rather than a Closure to be run:
 ```groovy
 lazyStage {
@@ -89,7 +97,7 @@ first in the local repo, then in the resource path of any loaded library.
 4. <lib_resources>/lazyDir/
 In case from 2 to 4, the script will be copied in /lazyDir/<stage_name>/ in the workspace.
 
-* Docker images
+#### Docker images
 Steps and scripts can be run inside Docker too.
 Each Dockerfile will be lookup and copied same way as described for the shell scripts above.
 ```groovy
@@ -106,7 +114,7 @@ lazyStage {
 
 ```
 
-* Input steps
+#### Input steps
 You can ask for user input per stage (before entering the node step):
 ```groovy
 lazyStage {
