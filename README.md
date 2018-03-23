@@ -22,8 +22,8 @@ possibly inside containers, without having to re-invent the wheel each time.
 - [lazyConfig](vars/lazyConfig.groovy): wrapper for properties and parameters steps
 - [lazyStage](vars/lazyStage.groovy): wrapper for stage step using lazyNode in parallel
 - [lazyNode](vars/lazyNode.groovy): wrapper for node step using lazyDocker and lazyStep
-- [lazyDocker](vars/lazyDocker.groovy): wrapper for docker steps using lazyStep, with dynamic resolution of Dockerfile's
-- [lazyStep](vars/lazyStep.groovy): wrapper for any steps or shell scripts, with dynamic resolution of script files
+- [lazyDocker](vars/lazyDocker.groovy): wrapper for docker steps using lazyStep, with [dynamic resolution of Dockerfiles](#docker-images)
+- [lazyStep](vars/lazyStep.groovy): wrapper for any steps or shell scripts, with [dynamic resolution of script files](#shell-scripts)
 - [lazyGitPass](vars/lazyGitPass.groovy): wrapper for git commands using user and password credential
 - [lazyLogger](src/org/jenkins/ci/lazy/lazyLogger.groovy): support levels of logging for the above components
 
