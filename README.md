@@ -58,7 +58,7 @@ lazyStage {
 ```
 
 ## Advanced usage
-..* Multi tasks
+* Multi tasks
 It is possible to pass a List of task rather than a single Map:
 ```groovy
 lazyStage {
@@ -71,7 +71,7 @@ lazyStage {
 }
 ```
 
-#### Shell scripts
+* Shell scripts
 It is possible to pass a List of script (or a single on as a String) rather than a Closure to be run:
 ```groovy
 lazyStage {
@@ -89,7 +89,7 @@ first in the local repo, then in the resource path of any loaded library.
 4. <lib_resources>/lazyDir/
 In case from 2 to 4, the script will be copied in /lazyDir/<stage_name>/ in the workspace.
 
-#### Docker images
+* Docker images
 Steps and scripts can be run inside Docker too.
 Each Dockerfile will be lookup and copied same way as described for the shell scripts above.
 ```groovy
@@ -106,7 +106,7 @@ lazyStage {
 
 ```
 
-#### Input steps
+* Input steps
 You can ask for user input per stage (before entering the node step):
 ```groovy
 lazyStage {
