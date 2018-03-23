@@ -4,13 +4,13 @@ Re-usable shared library to setup lazy Jenkins pipelines
 ## Scope
 The lazyLib is a collection of global methods, classes and resources to ease the maintenance of Jenkins pipelines.
 
-The primary goal is to make pipelines from different projects looks pretty much the same,
+The primary goal is to make pipelines from different projects look pretty much the same,
 so they could be easier to understand, design and mostly maintain.
 
-The secondary goal is to reduce duplication of the code used by the pipelines for each similar projects.
+The secondary goal is to reduce duplication of the code used by pipelines from similar projects.
 
-For instance, if a bunch of your projects use a common shell script and/or Dockerfile,
-chances are you will either have to:
+For instance, if a bunch of projects use a common shell script and/or Dockerfile,
+chances are it will be require to:
 - update those in every project separately
 - implement some step to provision those from a shared lib or a single repo
 - do both if you have to add and test a specific feature for one project
