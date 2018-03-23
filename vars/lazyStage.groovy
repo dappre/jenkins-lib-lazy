@@ -100,7 +100,7 @@ def call (body) {
         }
 
         logger.debug(params.name, 'Execute block(s) in parallel with input injected in environment')
-        withEnv(["LAZY_INPUT=${input}"]) {
+        withEnv(["lazyInput=${input.toString()}"]) {
             parallel(branches)
         }
         logger.info(params.name, 'Finished')
