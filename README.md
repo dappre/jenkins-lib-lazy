@@ -1,19 +1,19 @@
-# Jenkins Lib Lazy
+# Jenkins lazyLib
 Re-usable shared library to setup lazy Jenkins pipelines
 
 ## Scope
-LazyLib is a collection of global methods, classes and resources to ease the maintenance of Jenkins pipelines.
+The lazyLib is a collection of global methods, classes and resources to ease the maintenance of Jenkins pipelines.
 
 The primary goal is to make pipelines from different projects looks pretty much the same,
 so they could be easier to understand, design and mostly maintain.
 
-The secondary goal is to not repeat code used by the pipelines in each similar projects.
+The secondary goal is to reduce duplication of the code used by the pipelines for each similar projects.
 
 For instance, if a bunch of your projects use a common shell script and/or Dockerfile,
 chances are you will either have to:
 - update those in every project separately
-- implement some step to provision it from a shared lib
-- do both if you need to add/test a specific feature for one project   
+- implement some step to provision those from a shared lib or a single repo
+- do both if you have to add and test a specific feature for one project
 
 So the idea of lazyLib is to define some steps/scripts to be run on some nodes,
 possibly inside containers, without having to re-invent the wheel each time.
@@ -22,18 +22,20 @@ possibly inside containers, without having to re-invent the wheel each time.
 - [lazyConfig](vars/lazyConfig.groovy): wrapper for properties and parameters steps
 - [lazyStage](vars/lazyStage.groovy): wrapper for stage step using lazyNode in parallel
 - [lazyNode](vars/lazyNode.groovy): wrapper for node step using lazyDocker and lazyStep
-- [lazyDocker](vars/lazyDocker.groovy): wrapper for docker steps using lazyStep with dynamic resolution of Dockerfile
-- [lazyStep](vars/lazyStep.groovy): wrapper for shells or any other steps with dynammic resolution of scripts
-- [lazyGitPass](vars/lazyGitPass.groovy): wrapper for git command using user/password credential
+- [lazyDocker](vars/lazyDocker.groovy): wrapper for docker steps using lazyStep, with dynamic resolution of Dockerfile's
+- [lazyStep](vars/lazyStep.groovy): wrapper for any steps or shell scripts, with dynamic resolution of script files
+- [lazyGitPass](vars/lazyGitPass.groovy): wrapper for git commands using user and password credential
 - [lazyLogger](src/org/jenkins/ci/lazy/lazyLogger.groovy): support levels of logging for the above components
-Only the two first have to be used in the Jenkinsfile
+
+Only the two first have to be used in the Jenkinsfile.
+The others are either dependencies or optional.
 
 ## Usage
 
 1. Load the lazyLib from Jenkinsfile:
 ```groovy
 def libCmn = [
-    remote:           'https://code.in.digital-me.nl/git/DEVops/JenkinsLibLazy.git',
+    remote:           'https://github.com/digital-me/jenkins-lib-lazy.git',
     branch:           'master',
     credentialsId:    null,
 ]
@@ -93,12 +95,12 @@ lazyStage {
 In this case, lazyLib will lookup for each script in the following locations,
 first in the local repo, then in the resource path of any loaded library.
 
-1. <repo_root>/lazyDir/<stage_name>/<script1.sh>
-2. <repo_root>lazyDir/<script1.sh>
-3. <lib_resources>/lazyDir/<stage_name>/<script1.sh>
-4. <lib_resources>/lazyDir/<script1.sh>
+1. `<repo_root>/lazyDir/<stage_name>/<script1.sh>`
+2. `<repo_root>lazyDir/<script1.sh>`
+3. `<lib_resources>/lazyDir/<stage_name>/<script1.sh>`
+4. `<lib_resources>/lazyDir/<script1.sh>`
 
-In case from 2 to 4, the script will be copied in /lazyDir/<stage_name>/ in the workspace.
+In case from 2 to 4, the script will be copied in lazyDir/<stage_name>/ in the workspace.
 
 #### Docker images
 Steps and scripts can be run inside Docker too.
@@ -116,10 +118,10 @@ lazyStage {
 
 ```
 Each Dockerfile will be lookup and copied same way as described for the shell scripts:
-1. <repo_root>/lazyDir/<stage_name>/<docker_label1>.Dockerfile
-2. <repo_root>lazyDir/<docker_label1>.Dockerfile
-3. <lib_resources>/lazyDir/<stage_name>/<docker_label1>.Dockerfile
-4. <lib_resources>/lazyDir/<docker_label1>.Dockerfile
+1. `<repo_root>/lazyDir/<stage_name>/<docker_label1>.Dockerfile`
+2. `<repo_root>lazyDir/<docker_label1>.Dockerfile`
+3. `<lib_resources>/lazyDir/<stage_name>/<docker_label1>.Dockerfile`
+4. `<lib_resources>/lazyDir/<docker_label1>.Dockerfile`
 
 Additionaly, the pre and post steps Clorure will be executed, respectively before and after, outside the container.
 
