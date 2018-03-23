@@ -22,7 +22,6 @@ For instance, if a bunch of your projects use a common shell script of Dockerfil
 ## Basic usage
 
 1. Load the lazyLib from Jenkinsfile:
-
 ```groovy
 def libCmn = [
     remote:           'https://code.in.digital-me.nl/git/DEVops/JenkinsLibLazy.git',
@@ -39,33 +38,28 @@ library(
     ])
 )
 ```
-...Load optional custom and or extern libraries if required (same way as above).
+Load optional custom and or extern libraries if required (same way as above).
 
 2. Configure the pipeline with lazyConfig
-
 ```groovy
 lazyConfig(
     name: '<pipeline_name>',
 )
 ```
-...See lazyConfig for all the available options.
-...Most of wich will be available as parameters if the Job is manually triggered 
+See lazyConfig for all the available options.
+Most of wich will be available as parameters if the Job is manually triggered 
 
 3. Define stages with lazyStage
-
 ```groovy
 lazyStage {
     name = '<stage_name>'
     tasks = [ run: { step1(<args>); ... }, on: '<node_label>', ]
 }
-
 ```
 
 ## Advanced usage
-#### Multi tasks
-
-...It is possible to pass a List of task rather than a single Map:
-
+..* Multi tasks
+It is possible to pass a List of task rather than a single Map:
 ```groovy
 lazyStage {
     name = '<stage_name>'
@@ -75,7 +69,6 @@ lazyStage {
         ...
     ]
 }
-
 ```
 
 #### Shell scripts
