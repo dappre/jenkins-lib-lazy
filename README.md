@@ -18,7 +18,7 @@ chances are it will be require to:
 So the idea of lazyLib is to define some steps/scripts to be run on some nodes,
 possibly inside containers, without having to re-invent the wheel each time.
 
-## Componens
+## Components
 - [lazyConfig](vars/lazyConfig.groovy): wrapper for properties and parameters steps
 - [lazyStage](vars/lazyStage.groovy): wrapper for stage step using lazyNode in parallel
 - [lazyNode](vars/lazyNode.groovy): wrapper for node step using lazyDocker and lazyStep

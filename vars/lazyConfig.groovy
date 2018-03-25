@@ -70,12 +70,12 @@ def call(Map args = [:]) {
             textParam(name: 'labels', defaultValue: args.labels.collect{ it }.join("\n"), description: 'Map of node label to use for docker and other targeted agent'),
             textParam(name: 'dists', defaultValue: args.dists.join("\n"), description: 'List of distribution to use inside docker'),
             textParam(name: 'stages', defaultValue: args.stages.join("\n"), description: 'List of stages to go through (default: blank = all)'),
-            choice(name: 'verbosity', choices: logger.getLevels().join("\n"), defaultValue: 'INFO', description: 'Control verbosity (where implemented)'),
+            choice(name: 'verbosity', choices: logger.getLevels().join("\n"), defaultValue: 'INFO', description: 'Control verbosity (where implemented)'), /*
             // Parameters to load/enable the extended library
             string(name: 'libExtRemote', defaultValue: 'https://github.com/digital-me/jenkins-lib-lazy-ext.git', description: 'Git URL of the extended shared library'),
             string(name: 'libExtBranch', defaultValue: 'master', description: 'Git branch for the Extended shared library'),
             string(name: 'libExtCredId', defaultValue: 'none', description: 'Credentials to access the Extended shared library'),
-            booleanParam(name: 'extended', defaultValue: false, description: 'Enable extended stages (requires extended lib)'),
+            booleanParam(name: 'extended', defaultValue: false, description: 'Enable extended stages (requires extended lib)'),*/
         ])
         logger.trace('init', "Parameters content = ${params.toString()}")
         logger.debug('init', 'Create config map based on the user parameters and the prepared ones')
@@ -89,7 +89,7 @@ def call(Map args = [:]) {
             verbosity   : params.verbosity && params.verbosity.trim() != '' ? params.verbosity.trim() : args.verbosity,
             nopoll      : args.nopoll,
             cronpoll    : args.cronpoll,
-            extended    : true,
+            //extended    : true,
             branch      : args.branch,
         ])
         logger.debug('init', 'Set default logging level from config')
@@ -114,7 +114,7 @@ def call(Map args = [:]) {
 
         logger.debug('init', "Processing ${props.size()} properties")
         properties(props)
-
+/*
         logger.debug('init', 'Load Extended library if available and update configuration accordingly')
         logger.info('lib', 'Trying to load Extended library...')
         try {
@@ -131,7 +131,7 @@ def call(Map args = [:]) {
             logger.info('lib', 'Extended shared library could NOT be loaded: extended features are disabled')
             logger.warn('lib', "Extended shared library loading error message: ${error.message}")
             config.extended = false
-        }
+        }*/
     }
 
     logger.debug('Return config map')
