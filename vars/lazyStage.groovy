@@ -24,13 +24,23 @@ import org.jenkins.ci.lazy.Logger
 
 @Field private logger = new Logger(this)
 
+// Convert Map to List of String, to use config.env in withEnv
+def mapToList(Map map) {
+    def list = []
+    map.each { k, v ->
+      list += "${k}=${v}"
+    }
+    return list
+}
+
 def call (body) {
     logger.debug(params.name, 'Retrieving config')
     def config = lazyConfig()
 
-    logger.debug(params.name, 'Injecting environment variables from configuration/parameters')
-    def stageEnv = config.env + [ "LAZY_BRANCH=${config.branch}", "LAZY_LOGLEVEL=${config.logLevel}", ]
-    logger.info(params.name, "Injected environment = ${stageEnv}")
+    logger.debug(params.name, 'Injecting environment variables from configuration Map to List')
+    def stageEnv = mapToList(config.env)
+    stageEnv += [ "LAZY_BRANCH=${config.branch}", "LAZY_LOGLEVEL=${config.logLevel}", ]
+    logger.trace(params.name, "Injected environment = ${stageEnv}")
     withEnv(stageEnv as List) {
         def params = [
             env:    this.env,
