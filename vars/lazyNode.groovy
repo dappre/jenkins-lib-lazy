@@ -24,22 +24,22 @@ import org.jenkins.ci.lazy.Logger
 
 @Field private logger = new Logger(this)
 
-def call(stage, index, task, dist = null) {
+def call(stage, index, task, inLabel = null) {
     logger.debug('Retrieving config')
     def config = lazyConfig()
 
-    def name = dist ? "${stage}/${index}/${dist}" : "${stage}/${index}/${task.on}"
+    def name = inLabel ? "${stage}/${index}/${inLabel}" : "${stage}/${index}/${task.on}"
     logger.debug(name, "Detected tasks to be run on ${task.on}")
-    def label = task.on
-    if (config.labels[task.on]) {
-        label = config.labels[task.on]
-        logger.info(name, "Mapping found for label ${task.on} = ${label}")
+    def onLabel = task.on
+    if (config.onLabels[task.on]) {
+        onLabel = config.onLabels[task.on]
+        logger.info(name, "Mapping found for label ${task.on} = ${onLabel}")
     }
 
-    logger.info(name, "Preparing to branch on agent with label = ${label}")
+    logger.info(name, "Preparing to branch on agent with label = ${onLabel}")
     def branch = [
         (name): {
-            node(label: label) {
+            node(label: onLabel) {
                 logger.info('Started')
                 logger.trace("Env before = ${env.dump()}")
                 try {
@@ -55,13 +55,17 @@ def call(stage, index, task, dist = null) {
                                 task.pre.call()
                             }
 
-                            logger.trace("Processing dist = ${dist.toString()}")
-                            if (dist) {
+                            logger.trace("Processing inLabel = ${inLabel.toString()}")
+                            if (inLabel) {
                                 logger.debug('Docker required - Calling lazyDocker')
-                                lazyDocker(stage, task.run, dist, task.args)
+                                withEnv(["LAZY_LABEL=${inLabel}"]) {
+                                    lazyDocker(stage, task.run, inLabel, task.args)
+                                }
                             } else {
                                 logger.debug('Docker not required - Calling lazyStep')
-                                lazyStep(stage, task.run, task.on).each { step -> step() }
+                                withEnv(["LAZY_LABEL=${onLabel}"]) {
+                                    lazyStep(stage, task.run, task.on).each { step -> step() }
+                                }
                             }
 
                             if (task.post) {

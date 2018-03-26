@@ -25,21 +25,21 @@ import org.jenkins.ci.lazy.Logger
 @Field private logger = new Logger(this)
 
 // Function to prepare and list shell scripts (copy from lib to workspace if needed)
-def listScripts(stage, scripts, target) {
+def listScripts(stage, scripts, label) {
     logger.debug('listScripts', 'Retrieving config')
     def config = lazyConfig()
 
     def scriptList = []
 
     logger.debug('listScripts', 'Enter sub-folder where Dockerfiles and scripts are located')
-    dir("${config.sdir}/${stage}") {
+    dir("${config.dir}/${stage}") {
         scripts.each { script ->
             def dstScript = "${script}"    // Default main script location
             logger.debug('listScripts', 'Lookup fo the relevant main script in sub workspace first')
             // TODO: Rework to use fileExists?
             def srcScript = sh(
                 returnStdout: true,
-                script: "ls -1 ${target}.${script} 2> /dev/null || ls -1 ${script} 2> /dev/null || echo"
+                script: "ls -1 ${label}.${script} 2> /dev/null || ls -1 ${script} 2> /dev/null || echo"
             ).trim()
 
             if (srcScript != null && srcScript != '') {
@@ -49,9 +49,9 @@ def listScripts(stage, scripts, target) {
                 logger.debug('listScripts', 'Extract main script from shared lib')
                 def contentscript = ''
                 try {
-                    contentscript = libraryResource("${config.sdir}/${stage}/${target}.${script}")
+                    contentscript = libraryResource("${config.dir}/${stage}/${label}.${script}")
                 } catch (hudson.AbortException e) {
-                    contentscript = libraryResource("${config.sdir}/${stage}/${script}")
+                    contentscript = libraryResource("${config.dir}/${stage}/${script}")
                 }
 
                 logger.debug('listScripts', 'Write the selected Dockerfile to workspace sub-folder')
@@ -76,7 +76,7 @@ def listScripts(stage, scripts, target) {
 }
 
 // Parse task as Closure of (list of) String and return a List of step(s)
-def call (stage, task, target) {
+def call (stage, task, label) {
     logger.debug('Retrieving config')
     def config = lazyConfig()
 
@@ -91,13 +91,13 @@ def call (stage, task, target) {
         def scripts = []
         if (task instanceof List) {
             logger.trace("Task is a List (${task.toString()})")
-            scripts = listScripts(stage, task, target)
+            scripts = listScripts(stage, task, label)
         } else if (task instanceof String) {
             logger.trace("Task is a String (${task.toString()})")
-            scripts = listScripts(stage, [ task ], target)
+            scripts = listScripts(stage, [ task ], label)
         } else {
             logger.error('Give up if not a Closure, not a List and not a String!')
-            def err = "${stage}/${target} No idea what to do with task = ${task.toString()}"
+            def err = "${stage}/${label} No idea what to do with task = ${task.toString()}"
             logger.fatal(err)
             error err.toString()
         }
@@ -105,7 +105,7 @@ def call (stage, task, target) {
         // Collect all scripts as shell steps
         logger.trace("Task was referring to {scripts.size()} scripts (${scripts})")
         scripts.each { script ->
-            steps += { sh "${config.sdir}/${stage}/${script}" }
+            steps += { sh "${config.dir}/${stage}/${script}" }
         }
     }
     logger.trace("Task has been converted in ${steps.size()} steps (${steps.toString()})")

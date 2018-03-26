@@ -25,7 +25,7 @@ import org.jenkins.ci.lazy.Logger
 @Field private logger = new Logger(this)
 
 // Function to copy Dockerfile from lib to workspace if needed and build the image
-def buildImage(stage, dist, args = '', filename = 'Dockerfile') {
+def buildImage(stage, label, args = '', filename = 'Dockerfile') {
     logger.debug('buildImage', 'Retrieving config')
     def config = lazyConfig()
 
@@ -33,11 +33,11 @@ def buildImage(stage, dist, args = '', filename = 'Dockerfile') {
     logger.debug('buildImage', "Dockerfile will be saved in ${dstDockerfile}")
     
     logger.debug('buildImage', 'Enter sub-folder where Dockerfiles and scripts are located')
-    dir(config.sdir) {
+    dir(config.dir) {
         logger.debug('buildImage', 'Lookup fo the relevant Dockerfile in sub workspace first')
         def srcDockerfile = sh(
             returnStdout: true,
-            script: "ls -1 ${stage}/${dist}.Dockerfile 2> /dev/null || ls -1 ${dist}.Dockerfile 2> /dev/null || echo"
+            script: "ls -1 ${stage}/${label}.Dockerfile 2> /dev/null || ls -1 ${label}.Dockerfile 2> /dev/null || echo"
         ).trim()
 
         def contentDockerfile = ''
@@ -47,9 +47,9 @@ def buildImage(stage, dist, args = '', filename = 'Dockerfile') {
         } else {
             logger.debug('buildImage', 'Extract Dockerfile from shared lib')
             try {
-                contentDockerfile = libraryResource("${config.sdir}/${stage}/${dist}.Dockerfile")
+                contentDockerfile = libraryResource("${config.dir}/${stage}/${label}.Dockerfile")
             } catch (hudson.AbortException e) {
-                contentDockerfile = libraryResource("${config.sdir}/${dist}.Dockerfile")
+                contentDockerfile = libraryResource("${config.dir}/${label}.Dockerfile")
             }
         }
 
@@ -68,30 +68,28 @@ def buildImage(stage, dist, args = '', filename = 'Dockerfile') {
     logger.debug('buildImage', 'Build and return Docker image')
     withEnv(["UID=${uid}", "GID=${gid}"]) {
         return docker.build(
-            "${config.name}-${stage}-${dist}:${config.branch}",
-            "--build-arg dir=${stage} --build-arg uid=${env.UID} --build-arg gid=${env.GID} -f ${config.sdir}/${dstDockerfile} ${config.sdir}"
+            "${config.name}-${stage}-${label}:${config.branch}",
+            "--build-arg dir=${stage} --build-arg uid=${env.UID} --build-arg gid=${env.GID} -f ${config.dir}/${dstDockerfile} ${config.dir}"
         )
     }
 }
 
-def call (stage, task, dist, args = '') {
+def call (stage, task, label, args = '') {
     logger.debug('Retrieving global config')
     def config = lazyConfig()
 
     logger.debug('Collect steps from tasks for further execution')
-    def steps = lazyStep(stage, task, dist)
+    def steps = lazyStep(stage, task, label)
     
     logger.debug('Build the relevant Docker image')
-    def imgDocker = buildImage(stage, dist)
+    def imgDocker = buildImage(stage, label)
 
     logger.debug('Run each shell scripts as task inside the Docker')
     imgDocker.inside(args) {
-        withEnv(["DIST=${dist}"]) {
-            logger.debug("Calling each of the ${steps.size()} steps")
-            steps.each { step ->
-                logger.trace("Current step = ${step.toString()}")
-                step()
-            }
+        logger.debug("Calling each of the ${steps.size()} steps")
+        steps.each { step ->
+            logger.trace("Current step = ${step.toString()}")
+            step()
         }
     }
 
