@@ -51,7 +51,7 @@ def call(Map args = [:]) {
         args = [
             name:           env.JOB_NAME,
             dir:            env.LAZY_DIR ?: 'lazyDir',
-            env:            env.LAZY_ENV ? env.LAZY_ENV.split(",") : [],
+            env:            env.LAZY_ENV ? env.LAZY_ENV.split(";") : [],
             onLabels:       env.LAZY_ONLABELS ? mapFromText(env.LAZY_ONLABELS) : [ default: 'master' ],
             inLabels:       env.LAZY_INLABELS ? env.LAZY_INLABELS.split(",") : [],
             stageFilter:    env.LAZY_STAGEFILTER ? env.LAZY_STAGEFILTER.split(",") : [],
@@ -66,7 +66,7 @@ def call(Map args = [:]) {
 
 		logger.debug('init', 'Add parameters property')
         props += parameters([
-            textParam(name: 'LAZY_ENV', defaultValue: args.env.join("\n"), description: 'List of custom environment variables to be set (default: blank = none)'),
+            string(name: 'LAZY_ENV', defaultValue: args.env.join(';'), description: 'List of custom environment variables to be set (default: blank = none)'),
             textParam(name: 'LAZY_ONLABELS', defaultValue: args.onLabels.collect{ it }.join("\n"), description: 'Map of node labels for \'on\' values, for docker and other agent'),
             textParam(name: 'LAZY_INLABELS', defaultValue: args.inLabels.join("\n"), description: 'List of docker labels for \'in\' values (default: blank = all)'),
             textParam(name: 'LAZY_STAGEFILTER', defaultValue: args.stageFilter.join("\n"), description: 'Filter stages to go through (default: blank = all)'),
@@ -77,7 +77,7 @@ def call(Map args = [:]) {
         config.putAll([
             name:           args.name,
             dir:            args.dir,
-            env:            params.env && params.env.trim() != '' ? params.env.trim().split("\n") : args.env,
+            env:            params.env && params.env.trim() != '' ? params.env.trim().split(';') : args.env,
             onLabels:       params.onLabels && params.onLabels.trim() != '' ? mapFromText(params.onLabels.trim()) : args.onLabels,
             inLabels:       params.inLabels && params.inLabels.trim() != '' ? params.inLabels.trim().split("\n") : args.inLabels,
             stageFilter:    params.stageFilter && params.stageFilter.trim() != '' ? params.stageFilter.trim().split("\n") : args.stageFilter,
