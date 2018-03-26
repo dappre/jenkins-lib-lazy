@@ -27,6 +27,7 @@ import org.jenkins.ci.lazy.Logger
 def call (body) {
     def params = [
         name:   null,
+        onlyif: true,
         input:  null,
         tasks:  [],
         env: this.env,
@@ -47,6 +48,12 @@ def call (body) {
     }
     if (err) {
         error err
+    }
+
+    // Skip if the onlyif condition is not met
+    if (! params.onlyif) {
+        logger.info(params.name, "Skipped because onlif condition returned 'false'")
+        return 0
     }
 
     // Skip stage if not listed in the config
