@@ -50,8 +50,8 @@ def call (body) {
     }
 
     // Skip stage if not listed in the config
-    if (config.stages && !config.stages.contains(params.name)) {
-        logger.warn(params.name, "Skipped because (config.stages.${params.name} is not set)")
+    if (config.stageFilter && !config.stageFilter.contains(params.name)) {
+        logger.warn(params.name, "Skipped because (config.stageFilter.${params.name} is not set)")
         return 0
     }
 
@@ -82,20 +82,20 @@ def call (body) {
             ] + task
             logger.trace(params.name, "Task content after = ${task.dump()}")
 
-            logger.debug(params.name, 'Prepare the list of dists to be used for this task block')
+            logger.debug(params.name, 'Prepare the list of docker labels to be used for this task block')
             if (task.in == '*') {
-                if (config.dists) {
-                    logger.debug(params.name, "Expanding '*' with configured dists (${config.dists})")
-                    task.in = config.dists
+                if (config.inLabels) {
+                    logger.debug(params.name, "Expanding '*' with configured inLabels (${config.inLabels})")
+                    task.in = config.inLabels
                 } else {
-                    error "Using '*' as value for inside key requires dists to be configured"
+                    error "Using '*' as value for 'in' key requires inLabels to be configured"
                 }
             }
 
             logger.debug(params.name, 'Walking in task.in to populate branches')
-            task.in.each { dist ->
-                logger.trace("${params.name}/${index}/${task.on}", "Processing dist = ${dist.toString()}")
-                branches += lazyNode(params.name, index++, task, dist)
+            task.in.each { label ->
+                logger.trace("${params.name}/${index}/${task.on}", "Processing label = ${label.toString()}")
+                branches += lazyNode(params.name, index++, task, label)
             }
         }
 

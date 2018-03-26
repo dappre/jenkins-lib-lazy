@@ -49,16 +49,16 @@ def call(Map args = [:]) {
     if (!config) {
         logger.debug('init', 'Preparing config from env if available or hardcoded defaults if needed, squashed with args if set')
         args = [
-            name:        env.JOB_NAME,
-            sdir:        env.LAZY_SDIR ?: 'lazyDir',
-            env:         env.LAZY_ENV ? env.LAZY_ENV.split(",") : [],
-            labels:      env.LAZY_LABELS ? mapFromText(env.LAZY_LABELS) : [ default: 'master' ],
-            dists:       env.LAZY_DISTS ? env.LAZY_DISTS.split(",") : [],
-            stages:      env.LAZY_STAGES ? env.LAZY_STAGES.split(",") : [],
-            verbosity:   env.LAZY_VERBOSITY ?: 'INFO',
-            nopoll:      env.LAZY_NOPOLL ?: 'master',
-            cronpoll:    env.LAZY_CRONPOLL ?: 'H/10 * * * *',
-            branch:      env.BRANCH_NAME ?: env.LAZY_BRANCH ?: 'master',
+            name:           env.JOB_NAME,
+            dir:            env.LAZY_DIR ?: 'lazyDir',
+            env:            env.LAZY_ENV ? env.LAZY_ENV.split(",") : [],
+            onLabels:       env.LAZY_ONLABELS ? mapFromText(env.LAZY_ONLABELS) : [ default: 'master' ],
+            inLabels:       env.LAZY_INLABELS ? env.LAZY_INLABELS.split(",") : [],
+            stageFilter:    env.LAZY_STAGEFILTER ? env.LAZY_STAGEFILTER.split(",") : [],
+            logLevel:       env.LAZY_LOGLEVEL ?: 'INFO',
+            noPoll:         env.LAZY_NOPOLL ?: 'master',
+            cronPoll:       env.LAZY_CRONPOLL ?: 'H/10 * * * *',
+            branch:         env.BRANCH_NAME ?: env.LAZY_BRANCH ?: 'master',
             ] + args
 		logger.trace('init', "Initial config = ${params.toString()}")
 			
@@ -66,34 +66,28 @@ def call(Map args = [:]) {
 
 		logger.debug('init', 'Add parameters property')
         props += parameters([
-            textParam(name: 'env', defaultValue: args.env.join("\n"), description: 'List of custom environment variables to be set (default: blank = none)'),
-            textParam(name: 'labels', defaultValue: args.labels.collect{ it }.join("\n"), description: 'Map of node label to use for docker and other targeted agent'),
-            textParam(name: 'dists', defaultValue: args.dists.join("\n"), description: 'List of distribution to use inside docker'),
-            textParam(name: 'stages', defaultValue: args.stages.join("\n"), description: 'List of stages to go through (default: blank = all)'),
-            choice(name: 'verbosity', choices: logger.getLevels().join("\n"), defaultValue: 'INFO', description: 'Control verbosity (where implemented)'), /*
-            // Parameters to load/enable the extended library
-            string(name: 'libExtRemote', defaultValue: 'https://github.com/digital-me/jenkins-lib-lazy-ext.git', description: 'Git URL of the extended shared library'),
-            string(name: 'libExtBranch', defaultValue: 'master', description: 'Git branch for the Extended shared library'),
-            string(name: 'libExtCredId', defaultValue: 'none', description: 'Credentials to access the Extended shared library'),
-            booleanParam(name: 'extended', defaultValue: false, description: 'Enable extended stages (requires extended lib)'),*/
+            textParam(name: 'LAZY_ENV', defaultValue: args.env.join("\n"), description: 'List of custom environment variables to be set (default: blank = none)'),
+            textParam(name: 'LAZY_ONLABELS', defaultValue: args.onLabels.collect{ it }.join("\n"), description: 'Map of node labels for \'on\' values, for docker and other agent'),
+            textParam(name: 'LAZY_INLABELS', defaultValue: args.inLabels.join("\n"), description: 'List of docker labels for \'in\' values (default: blank = all)'),
+            textParam(name: 'LAZY_STAGEFILTER', defaultValue: args.stageFilter.join("\n"), description: 'Filter stages to go through (default: blank = all)'),
+            choice(name: 'LAZY_LOGLEVEL', choices: logger.getLevels().join("\n"), defaultValue: 'INFO', description: 'Control logLevel (where implemented)'),
         ])
         logger.trace('init', "Parameters content = ${params.toString()}")
         logger.debug('init', 'Create config map based on the user parameters and the prepared ones')
         config.putAll([
-            name        : args.name,
-            sdir        : args.sdir,
-            env         : params.env && params.env.trim() != '' ? params.env.trim().split("\n") : args.env,
-            labels      : params.labels && params.labels.trim() != '' ? mapFromText(params.labels.trim()) : args.labels,
-            dists       : params.dists && params.dists.trim() != '' ? params.dists.trim().split("\n") : args.dists,
-            stages      : params.stages && params.stages.trim() != '' ? params.stages.trim().split("\n") : args.stages,
-            verbosity   : params.verbosity && params.verbosity.trim() != '' ? params.verbosity.trim() : args.verbosity,
-            nopoll      : args.nopoll,
-            cronpoll    : args.cronpoll,
-            //extended    : true,
-            branch      : args.branch,
+            name:           args.name,
+            dir:            args.dir,
+            env:            params.env && params.env.trim() != '' ? params.env.trim().split("\n") : args.env,
+            onLabels:       params.onLabels && params.onLabels.trim() != '' ? mapFromText(params.onLabels.trim()) : args.onLabels,
+            inLabels:       params.inLabels && params.inLabels.trim() != '' ? params.inLabels.trim().split("\n") : args.inLabels,
+            stageFilter:    params.stageFilter && params.stageFilter.trim() != '' ? params.stageFilter.trim().split("\n") : args.stageFilter,
+            logLevel:       params.logLevel && params.logLevel.trim() != '' ? params.logLevel.trim() : args.logLevel,
+            noPoll:         args.noPoll,
+            cronPoll:       args.cronPoll,
+            branch:         args.branch,
         ])
         logger.debug('init', 'Set default logging level from config')
-        logger.setLevel(config.verbosity)
+        logger.setLevel(config.logLevel)
         logger.trace('init', "New config = ${config}")
 
         logger.debug('init', 'Add buildDiscarder property')
@@ -107,31 +101,13 @@ def call(Map args = [:]) {
         logger.debug('init', 'Disable multibranch indexing')
         props += overrideIndexTriggers(true)
 
-        if (!(env.BRANCH_NAME ==~ /${config.nopoll}/)) {
+        if (!(env.BRANCH_NAME ==~ /${config.noPoll}/)) {
             logger.info('init', 'Add pollSCM trigger property')
-            props += pipelineTriggers([pollSCM(config.cronpoll)])
+            props += pipelineTriggers([pollSCM(config.cronPoll)])
         }
 
         logger.debug('init', "Processing ${props.size()} properties")
         properties(props)
-/*
-        logger.debug('init', 'Load Extended library if available and update configuration accordingly')
-        logger.info('lib', 'Trying to load Extended library...')
-        try {
-            library(
-                    identifier: "libExt@${params.libExtBranch}",
-                    retriever: modernSCM([
-                        $class: 'GitSCMSource',
-                        remote: params.libExtRemote,
-                        credentialsId: params.libExtCredId
-                    ])
-                    )
-            logger.info('lib', 'Extended shared library loaded: extended features are supported')
-        } catch (error) {
-            logger.info('lib', 'Extended shared library could NOT be loaded: extended features are disabled')
-            logger.warn('lib', "Extended shared library loading error message: ${error.message}")
-            config.extended = false
-        }*/
     }
 
     logger.debug('Return config map')
