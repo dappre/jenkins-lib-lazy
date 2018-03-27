@@ -176,7 +176,12 @@ In case of a single parameter, it will just hold its value. If more than one, it
 - Add support for Windows nodes
 
 ### Required permissions:
-- staticMethod java.lang.Character toUpperCase char
-- method java.lang.Class isInstance java.lang.Object
+- staticMethod java.lang.Character toUpperCase char - to make the stage nam prettier in lazyStage
+- method java.lang.Class isInstance java.lang.Object - to be flexible with tasks in lazyStage, with run in lazyStep and json parsing in lazyConfig 
 - staticMethod org.codehaus.groovy.runtime.DefaultGroovyMethods invokeMethod java.lang.Object
 - staticMethod org.codehaus.groovy.runtime.DefaultGroovyMethods contains java.lang.Object[] java.lang.Object
+- method groovy.json.JsonOutput prettyPrint java.lang.String - to print pretty Json for default value of parameters in lazyConfig
+- method groovy.json.JsonOutput toJson java.lang.Object - to generate Json for default value of parameters in lazyConfig
+- method groovy.json.JsonOutput toJson java.util.Map - to generate Json for default value of parameters in lazyConfig
+- method groovy.json.JsonOutput toJson java.util.UUID - to generate Json for default value of parameters in lazyConfig
+- method groovy.json.JsonSlurper setType groovy.json.JsonParserType - to parse Json from parameters in lazyConfig
