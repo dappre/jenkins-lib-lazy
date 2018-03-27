@@ -43,6 +43,7 @@ def call (body) {
     logger.trace(params.name, "Injected environment = ${stageEnv}")
     withEnv(stageEnv as List) {
         def params = [
+            lazyConfig: config,
             env:    this.env,
             name:   null,
             onlyif: true,
