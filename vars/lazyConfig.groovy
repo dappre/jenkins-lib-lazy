@@ -21,9 +21,84 @@
 
 import groovy.transform.Field
 import org.jenkins.ci.lazy.Logger
+import groovy.json.JsonSlurper
+import groovy.json.JsonParserType
+import groovy.json.JsonOutput
 
 @Field private logger = new Logger(this)
 @Field public static Map config = [:]
+
+// Convert List to json String, without any extra sandbox permissions
+def toJson (List list) {
+    def json = "[\n"
+    list.eachWithIndex { it, i ->
+      logger.trace('toJson/list', "${it} / index = ${i}")
+        json += "  \"${it}\""
+        if (i < (list.size() - 1) ) {
+            json += ",\n"
+        } else {
+            json += "\n]"
+        }
+    }
+    return json
+}
+
+// Convert Map to json String, without any extra sandbox permissions
+def toJson(Map map) {
+    def json = "{\n"
+    map.eachWithIndex { k, v, i ->
+      logger.trace('toJson/map', "${k}=${v} / index = ${i}")
+        json += "  ${k}: ${v}"
+        if (i < (map.size() - 1) ) {
+            json += ",\n"
+        } else {
+            json += "\n}"
+        }
+    }
+    return json
+}
+
+// Convert Map to json String, requires extra sandbox permissions
+def toJsonPretty(obj) {
+    def jsonOut = new groovy.json.JsonOutput()
+    return jsonOut.prettyPrint(jsonOut.toJson(obj))
+}
+
+// Parse Json to Groovy object, requires extra sandbox permissions
+def parseText(text) {
+    logger.debug('parseText', 'Convert Json text to Map object')
+    logger.trace('parseText', "Parse from String = " + text.replaceAll("\\\n", "\\\\\\n"))
+    def jsonIn = new groovy.json.JsonSlurper().setType(JsonParserType.LAX)
+    def src = jsonIn.parseText(text)
+    logger.trace('parseText', "Source object = ${src.dump()}")
+    def dst = null
+    if (src instanceof groovy.json.internal.LazyValueMap) {
+        dst = [:]
+        dst.putAll(src)
+    } else if (src instanceof groovy.json.internal.ValueList) {
+        dst = []
+        dst += src
+    }
+    logger.trace('parseText', "Dest object = ${dst ? dst.dump() : dst}")
+    return dst
+}
+
+// Parse Json to Groovy object, without any extra sandbox permissions
+def parseTextToMap(text) {
+    logger.debug('parseTextToMap', 'Convert list of key/pair from String to Map')
+    logger.trace('parseTextToMap', "Parse from String = " + text.replaceAll("\\\n", "\\\\\\n"))
+    Map map = [:]
+    text.findAll(/"?([^=\n\s,"]+)"?\s*:\s*"?([^\n\s,"]+)"?/) { group ->
+        // REM: In Groovy console, the Closure parameters are 'full, key, value ->'
+        def key = group[1]
+        def value = group[2]
+        logger.trace('parseTextToMap', "Add key = ${key} and value = ${value}")
+        map[key] = value
+    }
+
+    logger.trace('mapFromText', "Resulting map = ${map}")
+    return map
+}
 
 // Convert list of key/pair from text to Map
 def mapFromText(String text) {
@@ -48,13 +123,14 @@ def call(Map args = [:]) {
 
     if (!config) {
         logger.debug('init', 'Preparing config from env if available or hardcoded defaults if needed, squashed with args if set')
+
         args = [
             name:           env.JOB_NAME,
             dir:            env.LAZY_DIR ?: 'lazyDir',
-            env:            env.LAZY_ENV ? env.LAZY_ENV.split(",") : [],
-            onLabels:       env.LAZY_ONLABELS ? mapFromText(env.LAZY_ONLABELS) : [ default: 'master' ],
-            inLabels:       env.LAZY_INLABELS ? env.LAZY_INLABELS.split(",") : [],
-            stageFilter:    env.LAZY_STAGEFILTER ? env.LAZY_STAGEFILTER.split(",") : [],
+            env:            env.LAZY_ENV ? parseText(env.LAZY_ENV) : [ DRYRUN: false, ],
+            onLabels:       env.LAZY_ONLABELS ? parseText(env.LAZY_ONLABELS) : [ default: 'master' ],
+            inLabels:       env.LAZY_INLABELS ? parseText(env.LAZY_INLABELS) : [],
+            stageFilter:    env.LAZY_STAGEFILTER ? parseText(env.LAZY_STAGEFILTER) : [],
             logLevel:       env.LAZY_LOGLEVEL ?: 'INFO',
             noPoll:         env.LAZY_NOPOLL ?: 'master',
             cronPoll:       env.LAZY_CRONPOLL ?: 'H/10 * * * *',
@@ -66,10 +142,10 @@ def call(Map args = [:]) {
 
 		logger.debug('init', 'Add parameters property')
         props += parameters([
-            textParam(name: 'LAZY_ENV', defaultValue: args.env.join("\n"), description: 'List of custom environment variables to be set (default: blank = none)'),
-            textParam(name: 'LAZY_ONLABELS', defaultValue: args.onLabels.collect{ it }.join("\n"), description: 'Map of node labels for \'on\' values, for docker and other agent'),
-            textParam(name: 'LAZY_INLABELS', defaultValue: args.inLabels.join("\n"), description: 'List of docker labels for \'in\' values (default: blank = all)'),
-            textParam(name: 'LAZY_STAGEFILTER', defaultValue: args.stageFilter.join("\n"), description: 'Filter stages to go through (default: blank = all)'),
+            textParam(name: 'LAZY_ENV', defaultValue: args.env ? toJsonPretty(args.env) : '', description: 'List of custom environment variables to be set (format: json, default: { "DRYRUN": false })'),
+            textParam(name: 'LAZY_ONLABELS', defaultValue: args.onLabels ? toJsonPretty(args.onLabels) : '', description: 'Map of node labels for \'on\' values, for docker and other agent (format: json, default: { "default": "master" })'),
+            textParam(name: 'LAZY_INLABELS', defaultValue: args.inLabels ? toJsonPretty(args.inLabels) : '', description: 'List of docker labels for \'in\' values (format: json, default: [])'),
+            textParam(name: 'LAZY_STAGEFILTER', defaultValue: args.stageFilter ? toJsonPretty(args.stageFilter) : '', description: 'Filter stages to go through (format: json, default: [] = enable all stages)'),
             choice(name: 'LAZY_LOGLEVEL', choices: logger.getLevels().join("\n"), defaultValue: 'INFO', description: 'Control logLevel (where implemented)'),
         ])
         logger.trace('init', "Parameters content = ${params.toString()}")
@@ -77,11 +153,11 @@ def call(Map args = [:]) {
         config.putAll([
             name:           args.name,
             dir:            args.dir,
-            env:            params.env && params.env.trim() != '' ? params.env.trim().split("\n") : args.env,
-            onLabels:       params.onLabels && params.onLabels.trim() != '' ? mapFromText(params.onLabels.trim()) : args.onLabels,
-            inLabels:       params.inLabels && params.inLabels.trim() != '' ? params.inLabels.trim().split("\n") : args.inLabels,
-            stageFilter:    params.stageFilter && params.stageFilter.trim() != '' ? params.stageFilter.trim().split("\n") : args.stageFilter,
-            logLevel:       params.logLevel && params.logLevel.trim() != '' ? params.logLevel.trim() : args.logLevel,
+            env:            params.LAZY_ENV && params.LAZY_ENV.trim() != '' ? parseText(params.LAZY_ENV) : args.env,
+            onLabels:       params.LAZY_ONLABELS && params.LAZY_ONLABELS.trim() != '' ? parseText(params.LAZY_ONLABELS) : args.onLabels,
+            inLabels:       params.LAZY_INLABELS && params.LAZY_INLABELS.trim() != '' ? parseText(params.LAZY_INLABELS) : args.inLabels,
+            stageFilter:    params.LAZY_STAGEFILTER && params.LAZY_STAGEFILTER.trim() != '' ? parseText(params.LAZY_STAGEFILTER) : args.stageFilter,
+            logLevel:       params.LAZY_LOGLEVEL && params.LAZY_LOGLEVEL.trim() != '' ? params.LAZY_LOGLEVEL.trim() : args.logLevel,
             noPoll:         args.noPoll,
             cronPoll:       args.cronPoll,
             branch:         args.branch,
