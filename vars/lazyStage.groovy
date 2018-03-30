@@ -44,11 +44,15 @@ def call (body) {
     withEnv(stageEnv as List) {
         def params = [
             lazyConfig: config,
-            env:    this.env,
             name:   null,
             onlyif: true,
             input:  null,
             tasks:  [],
+            // FIXME: Not sure why, but it seems like the global
+            // vars are not available within the stage Closure
+            // so we need to sort of copy them for now
+            env:            this.env,
+            currentBuild:   this.currentBuild,
         ]
         body.resolveStrategy = Closure.DELEGATE_FIRST
         body.delegate = params
