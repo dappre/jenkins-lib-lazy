@@ -25,7 +25,7 @@ possibly inside containers, without having to re-invent the wheel each time.
 - [lazyDocker](vars/lazyDocker.groovy): wrapper for docker steps using lazyStep, with [dynamic resolution of Dockerfiles](#docker-images)
 - [lazyStep](vars/lazyStep.groovy): wrapper for any steps or shell scripts, with [dynamic resolution of script files](#shell-scripts)
 - [lazyGitPass](vars/lazyGitPass.groovy): wrapper for git commands using user and password credential
-- [lazyLogger](src/org/jenkins/ci/lazy/lazyLogger.groovy): support levels of logging for the above components
+- [lazyLogger](src/org/jenkins/ci/lazy/Logger.groovy): support levels of logging for the above components
 
 Only the two first have to be used in the Jenkinsfile.
 The others are either dependencies or optional.
@@ -34,24 +34,24 @@ The others are either dependencies or optional.
 
 - Jenkins v2.89+ on Linux (Mac should work, but not 'pure' Windows because depending on shell)
 - Docker 1.12.6+ to use lazyDocker
-
+- Jenkins security [permissions](#required-permissions)
 
 ## Usage
 
 1. Load the lazyLib from Jenkinsfile:
 ```groovy
-def libCmn = [
+def libLazy = [
     remote:           'https://github.com/digital-me/jenkins-lib-lazy.git',
     branch:           'master',
     credentialsId:    null,
 ]
 
 library(
-    identifier: "libCmn@${libCmn.branch}",
+    identifier: "libLazy@${libLazy.branch}",
     retriever: modernSCM([
         $class: 'GitSCMSource',
-        remote: libCmn.remote,
-        credentialsId: libCmn.credentialsId
+        remote: libLazy.remote,
+        credentialsId: libLazy.credentialsId
     ])
 )
 ```
@@ -60,7 +60,10 @@ Load optional custom and or extern libraries if required (same way as above).
 2. Configure the pipeline with lazyConfig
 ```groovy
 lazyConfig(
-    name: '<pipeline_name>',
+    name:     '<pipeline_name>',
+    dir:      '<script_dir>',
+    inLabels: [ '<docker_label1>', ...],
+    onLabels: [ <node_label1>:<agent_label1>, ...],
 )
 ```
 See [lazyConfig](vars/lazyConfig.groovy) for all the available options.
@@ -96,7 +99,6 @@ lazyStage {
     tasks = [ run: [ '<script>', ... ], on: '<node_label>', ]
     ]
 }
-
 ```
 In this case, lazyLib will lookup for each script in the following locations,
 first in the local repo, then in the resource path of any loaded library:
@@ -110,7 +112,7 @@ first in the local repo, then in the resource path of any loaded library:
 7. `<lib_resources>/<lazyDir>/<node_label>.<script_name>`
 8. `<lib_resources>/<lazyDir>/<script_name>`
 
-*REM*: In case from 3 to 8, the script will be copied in `lazyDir/<stage_name>/` in the workspace.
+*REM*: In case from 3 to 8, the script will be copied under `lazyDir/<stage_name>/` in the workspace.
 
 Each resolved script will then be executed in sequence, using their absotute path from the workspace,
 and no argument (yet) but with the following environment variables:
@@ -133,7 +135,6 @@ lazyStage {
         on: '<node_label>',
     ]
 }
-
 ```
 Each Dockerfile will be looked up and copied same way as for the shell scripts:
 
@@ -159,7 +160,6 @@ lazyStage {
         [ run: { step1(env.lazyInput, <args>); ... }, on: '<node_label>', ]
     ]
 }
-
 ```
 For each tasks, the environment variable lazyInput will hold the object created by the input step call with the input object defined avove.
 In case of a single parameter, it will just hold its value. If more than one, it will hold a map. See Jenkins documentation for more info.
