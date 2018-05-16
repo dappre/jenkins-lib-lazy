@@ -25,38 +25,64 @@ import org.jenkins.ci.lazy.Logger
 @Field private logger = new Logger(this)
 
 // Parse task as Closure of (list of) String and return a List of step(s)
-def call (stage, task, label) {
+def call (stage, tasks, label) {
     logger.debug('Retrieving config')
     def config = lazyConfig()
 
     logger.debug('Collect steps to be resolved')
     def steps = []
-    if (task instanceof Closure) {
-        logger.trace("Task is a Closure = ${task.toString()}")
+    if (tasks instanceof Closure) {
+        logger.trace("Task is a Closure = ${tasks.toString()}")
         // If task is a Closure, just add it in the step list
-        steps += task
+        steps += tasks
     } else {
         logger.debug('Prepare shell scripts from (list of) String')
-        def scripts = []
-        if (task instanceof List) {
-            logger.trace("Task is a List (${task.toString()})")
-            scripts = lazyRes(stage, task, label)
-        } else if (task instanceof String) {
-            logger.trace("Task is a String (${task.toString()})")
-            scripts = lazyRes(stage, [ task ], label)
+        if (tasks instanceof List) {
+            logger.trace("Task is a List (${tasks.toString()})")
+        } else if (tasks instanceof String) {
+            logger.trace("Task is a String (${tasks.toString()})")
+            tasks = [ tasks ]
         } else {
             logger.error('Give up if not a Closure, not a List and not a String!')
-            def err = "${stage}/${label} No idea what to do with task = ${task.toString()}"
+            def err = "${stage}/${label} No idea what to do with task = ${tasks.toString()}"
             logger.fatal(err)
             error err.toString()
         }
 
-        // Collect all scripts as shell steps
-        logger.trace("Task was referring to {scripts.size()} scripts (${scripts})")
-        scripts.each { script ->
+        logger.debug("Split paths and arguments from each script task")
+        def paths = []
+        def args = []
+        tasks.each { task ->
+            logger.trace("Looking for space in task = ${task}")
+            def stArr = task.split()
+            
+            if (stArr.size() > 1) {
+                logger.debug("Found space in task")
+                logger.trace("path = ${stArr[0]} / args = ${stArr[1]}")
+                paths += stArr[0]
+                args += task.substring(stArr[0].size() + 1)
+            } else {
+                logger.debug("Found NO space in task")
+                logger.trace("path = ${task}")
+                paths += task
+                args += null
+            }
+        }
+
+        logger.debug("Prepare scripts, with possible prefix")
+        def scripts = lazyRes(stage, paths, label)
+
+        logger.debug("Collect all scripts as shell steps")
+        logger.trace("Task was referring to ${scripts.size()} scripts (${scripts})")
+        scripts.eachWithIndex { script, i ->
+                def shStep = "${config.dir}/${stage}/${script}"
                 logger.trace("Change mode of ${script} to allow execution")
-                sh("chmod +x ${config.dir}/${stage}/${script}")
-                steps += { sh("${config.dir}/${stage}/${script}") }
+                sh("chmod +x ${shStep}")
+                if (args[i]) {
+                    logger.debug("Add argument(s) to script")
+                    shStep += " ${args[i]}"
+                }
+                steps += { sh(shStep) }
         }
     }
     logger.trace("Task has been converted in ${steps.size()} steps (${steps.toString()})")
