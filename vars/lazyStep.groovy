@@ -75,7 +75,7 @@ def call (stage, tasks, label) {
         logger.debug("Collect all scripts as shell steps")
         logger.trace("Task was referring to ${scripts.size()} scripts (${scripts})")
         scripts.eachWithIndex { script, i ->
-                def shStep = "${config.dir}/${stage}/${script}"
+                def shStep = "${config.dir}/${script}"
                 logger.trace("Change mode of ${script} to allow execution")
                 sh("chmod +x ${shStep}")
                 if (args[i]) {
