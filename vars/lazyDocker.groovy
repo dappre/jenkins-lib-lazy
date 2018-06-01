@@ -29,36 +29,8 @@ def buildImage(stage, label, args = '', filename = 'Dockerfile') {
     logger.debug('buildImage', 'Retrieving config')
     def config = lazyConfig()
 
-    def dstDockerfile = "./${stage}/${filename}"
-    logger.debug('buildImage', "Dockerfile will be saved in ${dstDockerfile}")
-    
-    logger.debug('buildImage', 'Enter sub-folder where Dockerfiles and scripts are located')
-    dir(config.dir) {
-        logger.debug('buildImage', 'Lookup fo the relevant Dockerfile in sub workspace first')
-        def srcDockerfile = sh(
-            returnStdout: true,
-            script: "ls -1 ${stage}/${label}.Dockerfile 2> /dev/null || ls -1 ${label}.Dockerfile 2> /dev/null || echo"
-        ).trim()
-
-        def contentDockerfile = ''
-        if (srcDockerfile != null && srcDockerfile != '') {
-            logger.debug('buildImage', 'Read Dockerfile from workspace if existing')
-            contentDockerfile = readFile(srcDockerfile)
-        } else {
-            logger.debug('buildImage', 'Extract Dockerfile from shared lib')
-            try {
-                contentDockerfile = libraryResource("${config.dir}/${stage}/${label}.Dockerfile")
-            } catch (hudson.AbortException e) {
-                contentDockerfile = libraryResource("${config.dir}/${label}.Dockerfile")
-            }
-        }
-
-        logger.debug('buildImage', 'Write the selected Dockerfile to workspace sub-folder')
-        writeFile(
-            file: dstDockerfile,
-            text: contentDockerfile
-        )
-    }
+	logger.debug('buildImage', 'Collect Dockerfile from repo or lib image')
+    def dstDockerfile = lazyRes(stage, [ filename, ], label)[0]
 
     logger.debug('buildImage', 'Get uid of current UID and GID to build docker image')
     // This will allow Jenkins to manipulate content generated within Docker
