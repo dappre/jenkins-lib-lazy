@@ -134,6 +134,8 @@ def call(Map args = [:]) {
             logLevel:       env.LAZY_LOGLEVEL ?: 'INFO',
             noPoll:         env.LAZY_NOPOLL ?: 'master',
             cronPoll:       env.LAZY_CRONPOLL ?: 'H/10 * * * *',
+			buildToKeep:	env.LAZY_BUILDTOKEEP ?: '5',
+			compressLog:	env.LAZY_COMPRESSLOG ?: false,
             branch:         env.BRANCH_NAME ?: env.LAZY_BRANCH ?: 'master',
             ] + args
 		logger.trace('init', "Initial config = ${params.toString()}")
@@ -160,6 +162,8 @@ def call(Map args = [:]) {
             logLevel:       params.LAZY_LOGLEVEL && params.LAZY_LOGLEVEL.trim() != '' ? params.LAZY_LOGLEVEL.trim() : args.logLevel,
             noPoll:         args.noPoll,
             cronPoll:       args.cronPoll,
+			buildToKeep:	args.buildToKeep,
+			compressLog:	args.compressLog,
             branch:         args.branch,
         ])
         logger.debug('init', 'Set default logging level from config')
@@ -168,7 +172,7 @@ def call(Map args = [:]) {
 
         logger.debug('init', 'Add buildDiscarder property')
         props += buildDiscarder(
-            logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')
+            logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: config.buildToKeep)
         )
 
         logger.debug('init', 'Disable concurrent builds by default')
@@ -178,9 +182,17 @@ def call(Map args = [:]) {
         props += overrideIndexTriggers(true)
 
         if (!(env.BRANCH_NAME ==~ /${config.noPoll}/)) {
-            logger.info('init', 'Add pollSCM trigger property')
-            props += pipelineTriggers([pollSCM(config.cronPoll)])
-        }
+            logger.info('init', 'Enable SCM polling and post-commit trigger')
+            props += pipelineTriggers([[$class: "SCMTrigger", scmpoll_spec: config.cronPoll, ignorePostCommitHooks: false],])
+        } else {
+            logger.info('init', 'Disable SCM polling and post-commit trigger')
+			props += pipelineTriggers([[$class: "SCMTrigger", scmpoll_spec: "#${config.cronPoll}", ignorePostCommitHooks: true],])
+		}
+		
+		if (config.compressLog) {
+			logger.debug('init', 'Set build log compression to ${compressLog}')
+			props += compressBuildLog()
+		}
 
         logger.debug('init', "Processing ${props.size()} properties")
         properties(props)
