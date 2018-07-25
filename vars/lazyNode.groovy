@@ -33,7 +33,7 @@ def call(stage, index, task, inLabel = null) {
     def onLabel = task.on
     if (config.onLabels[task.on]) {
         onLabel = config.onLabels[task.on]
-        logger.info(name, "Mapping found for label ${task.on} = ${onLabel}")
+        logger.trace(name, "Mapping found for label ${task.on} = ${onLabel}")
     }
 
     logger.info(name, "Preparing to branch on agent with label = ${onLabel}")
@@ -47,30 +47,28 @@ def call(stage, index, task, inLabel = null) {
                     checkout scm
                     logger.trace("Env after = ${env.dump()}")
                     ansiColor('xterm') {
-                        if (task.pre) {
-                            logger.debug('Execute pre closure first')
-                            logger.trace("Post closure = ${task.pre.toString()}")
-                            task.pre.call()
-                        }
-
-                        logger.trace("Processing inLabel = ${inLabel.toString()}")
-                        if (inLabel) {
-                            logger.debug('Docker required - Calling lazyDocker')
-                            withEnv(["LAZY_LABEL=${inLabel}"]) {
-                                lazyDocker(stage, task.run, inLabel, task.args)
-                            }
-                        } else {
-                            logger.debug('Docker not required - Calling lazyStep')
-                            withEnv(["LAZY_LABEL=${onLabel}"]) {
-                                lazyStep(stage, task.run, task.on).each { step -> step() }
-                            }
-                        }
-
-                        if (task.post) {
-                            logger.debug('Execute post closure at the end')
-                            logger.trace("Post closure = ${task.post.toString()}")
-                            task.post.call()
-                        }
+						withEnv(["LAZY_LABEL=${inLabel ?: onLabel}"]) {
+	                        if (task.pre) {
+	                            logger.debug('Execute pre closure first')
+	                            logger.trace("Post closure = ${task.pre.toString()}")
+	                            task.pre.call()
+	                        }
+	
+	                        logger.trace("Processing inLabel = ${inLabel.toString()}")
+	                        if (inLabel) {
+	                            logger.debug('Docker required - Calling lazyDocker')
+	                            lazyDocker(stage, task.run, inLabel, task.args)
+	                        } else {
+	                            logger.debug('Docker not required - Calling lazyStep')
+	                            lazyStep(stage, task.run, task.on).each { step -> step() }
+	                        }
+	
+	                        if (task.post) {
+	                            logger.debug('Execute post closure at the end')
+	                            logger.trace("Post closure = ${task.post.toString()}")
+	                            task.post.call()
+	                        }
+						}
                     }
                 } catch (e) {
                     error e.toString()
