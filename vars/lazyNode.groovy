@@ -33,7 +33,7 @@ def call(stage, index, task, inLabel = null) {
     def onLabel = task.on
     if (config.onLabels[task.on]) {
         onLabel = config.onLabels[task.on]
-        logger.info(name, "Mapping found for label ${task.on} = ${onLabel}")
+        logger.trace(name, "Mapping found for label ${task.on} = ${onLabel}")
     }
 
     logger.info(name, "Preparing to branch on agent with label = ${onLabel}")
