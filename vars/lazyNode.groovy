@@ -36,7 +36,7 @@ def call(stage, index, task, inLabel = null) {
         logger.trace(name, "Mapping found for label ${task.on} = ${onLabel}")
     }
 
-    logger.info(name, "Preparing to branch on agent with label = ${onLabel}")
+    logger.trace(name, "Preparing to branch on agent with label = ${onLabel}")
     def branch = [
         (name): {
             node(label: onLabel) {
