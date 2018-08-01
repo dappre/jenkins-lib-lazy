@@ -182,10 +182,10 @@ def call(Map args = [:]) {
         props += overrideIndexTriggers(true)
 
         if (!(env.BRANCH_NAME ==~ /${config.noPoll}/)) {
-            logger.info('init', 'Enable SCM polling and post-commit trigger')
-            props += pipelineTriggers([[$class: "SCMTrigger", scmpoll_spec: config.cronPoll, ignorePostCommitHooks: false],])
+            logger.info('init', 'Enable SCM polling')
+            props += pipelineTriggers([[$class: "SCMTrigger", scmpoll_spec: config.cronPoll, ignorePostCommitHooks: true],])
         } else {
-            logger.info('init', 'Disable SCM polling and post-commit trigger')
+            logger.info('init', 'Disable SCM polling')
 			props += pipelineTriggers([[$class: "SCMTrigger", scmpoll_spec: "#${config.cronPoll}", ignorePostCommitHooks: true],])
 		}
 		
