@@ -65,7 +65,9 @@ lazyConfig(
 		BUILD_DIR: 'target',
 		GIT_CRED: 'bot-ci-dgm',
 	],
-	noIndex:	"(${releaseBranch}|.+_.+)",	// Don't poll or automatically trigger release and private branches
+	inLabels:   [ 'ubuntu-16', 'centos-7' ],
+	onLabels:   [ default: 'linux', docker: 'docker', ],
+	noIndex:	"(${releaseBranch}|.+_.+)",	// Avoid automatic indexing for release and private branches
 )
 
 lazyStage {
