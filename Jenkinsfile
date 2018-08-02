@@ -133,6 +133,9 @@ lazyStage {
 				// Tag and publish changes in release branch
 				gitTag("${nextVersion}")
 				gitPush(remote, "${releaseBranch} ${nextVersion}")
+				// Update the displayed version for this build
+				currentVersion = gitLastTag()
+				currentBuild.displayName = "#${env.BUILD_NUMBER} ${currentVersion}"
 			})
 		},
 		// Can not be done in parallel
