@@ -10,7 +10,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *	 http://www.apache.org/licenses/LICENSE-2.0
+ *	   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,8 +21,8 @@
 
 // Load Jenkins shared libraries common to all projects
 def libLazy = [
-	remote:			'https://code.in.digital-me.nl/git/DEVops/JenkinsLibLazy.git',
-	branch:			'master',
+	remote:			'https://github.com/digital-me/jenkins-lib-lazy.git',
+	branch:			'stable',
 	credentialsId:	null,
 ]
 
@@ -38,7 +38,7 @@ library(
 // Load Jenkins shared libraries to customize this project
 def libCustom = [
 	remote:			'ssh://git@code.in.digital-me.nl:2222/DEVops/JenkinsLibCustom.git',
-	branch:			'master',
+	branch:			'stable',
 	credentialsId:	'bot-ci-dgm-rsa',
 ]
 
@@ -54,7 +54,7 @@ library(
 // Define the remotes and the working and deploy branches
 def remote = 'origin'
 def workingBranch = 'master'
-def releaseBranch = 'release'
+def releaseBranch = 'stable'
 
 // Initialize configuration
 lazyConfig(
