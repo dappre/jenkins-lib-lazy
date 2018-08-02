@@ -63,7 +63,7 @@ lazyConfig(
 		RELEASE: false,
 		DRYRUN: false,
 		BUILD_DIR: 'target',
-		GIT_CRED: 'bot-ci-dgm',
+		GIT_CRED: 'bot-ci-dgm-rsa',
 	],
 	inLabels:   [ 'ubuntu-16', 'centos-7' ],
 	onLabels:   [ default: 'linux', docker: 'docker', ],
