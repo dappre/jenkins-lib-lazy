@@ -132,17 +132,19 @@ def call(Map args = [:]) {
             inLabels:       env.LAZY_INLABELS ? parseText(env.LAZY_INLABELS) : [],
             stageFilter:    env.LAZY_STAGEFILTER ? parseText(env.LAZY_STAGEFILTER) : [],
             logLevel:       env.LAZY_LOGLEVEL ?: 'INFO',
-            noPoll:         env.LAZY_NOPOLL ?: 'master',
+            noIndex:        env.LAZY_NOINDEX ?: '(.*_.*)',
+            noPoll:         env.LAZY_NOPOLL ?: '(.*_.*)',
             cronPoll:       env.LAZY_CRONPOLL ?: 'H/10 * * * *',
-			buildToKeep:	env.LAZY_BUILDTOKEEP ?: '5',
-			compressLog:	env.LAZY_COMPRESSLOG ?: false,
+			forceTrigger:	env.LAZY_FORCETRIGGER ?: false,
+            buildToKeep:    env.LAZY_BUILDTOKEEP ?: '5',
+            compressLog:    env.LAZY_COMPRESSLOG ?: false,
             branch:         env.BRANCH_NAME ?: env.LAZY_BRANCH ?: 'master',
             ] + args
-		logger.trace('init', "Initial config = ${params.toString()}")
-			
+        logger.trace('init', "Initial config = ${params.toString()}")
+            
         def props = []
 
-		logger.debug('init', 'Add parameters property')
+        logger.debug('init', 'Add parameters property')
         props += parameters([
             textParam(name: 'LAZY_ENV', defaultValue: args.env ? toJsonPretty(args.env) : '', description: 'List of custom environment variables to be set (format: json, default: { "DRYRUN": false })'),
             textParam(name: 'LAZY_ONLABELS', defaultValue: args.onLabels ? toJsonPretty(args.onLabels) : '', description: 'Map of node labels for \'on\' values, for docker and other agent (format: json, default: { "default": "master" })'),
@@ -160,10 +162,12 @@ def call(Map args = [:]) {
             inLabels:       params.LAZY_INLABELS && params.LAZY_INLABELS.trim() != '' ? parseText(params.LAZY_INLABELS) : args.inLabels,
             stageFilter:    params.LAZY_STAGEFILTER && params.LAZY_STAGEFILTER.trim() != '' ? parseText(params.LAZY_STAGEFILTER) : args.stageFilter,
             logLevel:       params.LAZY_LOGLEVEL && params.LAZY_LOGLEVEL.trim() != '' ? params.LAZY_LOGLEVEL.trim() : args.logLevel,
+            noIndex:        args.noIndex,
             noPoll:         args.noPoll,
             cronPoll:       args.cronPoll,
-			buildToKeep:	args.buildToKeep,
-			compressLog:	args.compressLog,
+			forceTrigger:	args.forceTrigger,
+            buildToKeep:    args.buildToKeep,
+            compressLog:    args.compressLog,
             branch:         args.branch,
         ])
         logger.debug('init', 'Set default logging level from config')
@@ -178,21 +182,26 @@ def call(Map args = [:]) {
         logger.debug('init', 'Disable concurrent builds by default')
         props += disableConcurrentBuilds()
 
-        logger.debug('init', 'Disable multibranch indexing')
-        props += overrideIndexTriggers(true)
+        if ( env.BRANCH_NAME ==~ /${config.noIndex}/ ) {
+            logger.debug('init', 'Disable multibranch indexing')
+            props += overrideIndexTriggers(false)
+        } else if (config.forceTrigger) {
+            logger.debug('init', 'Enable multibranch indexing')
+            props += overrideIndexTriggers(true)
+        }
 
-        if (!(env.BRANCH_NAME ==~ /${config.noPoll}/)) {
-            logger.info('init', 'Enable SCM polling')
-            props += pipelineTriggers([[$class: "SCMTrigger", scmpoll_spec: config.cronPoll, ignorePostCommitHooks: true],])
-        } else {
+        if ( env.BRANCH_NAME ==~ /${config.noPoll}/ ) {
             logger.info('init', 'Disable SCM polling')
-			props += pipelineTriggers([[$class: "SCMTrigger", scmpoll_spec: "#${config.cronPoll}", ignorePostCommitHooks: true],])
-		}
-		
-		if (config.compressLog) {
-			logger.debug('init', 'Set build log compression to ${compressLog}')
-			props += compressBuildLog()
-		}
+            props += pipelineTriggers([[$class: "SCMTrigger", scmpoll_spec: "#${config.cronPoll}", ignorePostCommitHooks: true],])
+        } else if (config.forceTrigger) {
+            logger.info('init', 'Enable SCM polling')
+            props += pipelineTriggers([[$class: "SCMTrigger", scmpoll_spec: config.cronPoll, ignorePostCommitHooks: false],])
+        }
+
+        if (config.compressLog) {
+            logger.debug('init', 'Set build log compression to ${compressLog}')
+            props += compressBuildLog()
+        }
 
         logger.debug('init', "Processing ${props.size()} properties")
         properties(props)
