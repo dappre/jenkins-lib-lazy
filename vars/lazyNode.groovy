@@ -60,7 +60,16 @@ def call(stage, index, task, inLabel = null) {
 	                            lazyDocker(stage, task.run, inLabel, task.args)
 	                        } else {
 	                            logger.debug('Docker not required - Calling lazyStep')
-	                            lazyStep(stage, task.run, task.on).each { step -> step() }
+	                            lazyStep(stage, task.run, task.on).each { step ->
+                                    if (config.timestampsLog) {
+                                        logger.debug('Enable timestamps for this step')
+                                        timestamps {
+                                            step()
+                                        }
+                                    } else {
+                                        step()
+                                    }
+								}
 	                        }
 	
 	                        if (task.post) {

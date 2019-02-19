@@ -61,7 +61,14 @@ def call (stage, task, label, args = '') {
         logger.debug("Calling each of the ${steps.size()} steps")
         steps.each { step ->
             logger.trace("Current step = ${step.toString()}")
-            step()
+            if (config.timestampsLog) {
+                logger.debug('Enable timestamps for this step')
+                timestamps {
+                    step()
+                }
+            } else {
+                step()
+            }
         }
     }
 
