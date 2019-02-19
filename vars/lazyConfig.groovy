@@ -138,6 +138,7 @@ def call(Map args = [:]) {
 			forceTrigger:	env.LAZY_FORCETRIGGER ?: false,
             buildToKeep:    env.LAZY_BUILDTOKEEP ?: '5',
             compressLog:    env.LAZY_COMPRESSLOG ?: false,
+			timestampsLog:  env.LAZY_TIMESTAMPSLOG ?: false,
             branch:         env.BRANCH_NAME ?: env.LAZY_BRANCH ?: 'master',
             ] + args
         logger.trace('init', "Initial config = ${params.toString()}")
@@ -168,6 +169,7 @@ def call(Map args = [:]) {
 			forceTrigger:	args.forceTrigger,
             buildToKeep:    args.buildToKeep,
             compressLog:    args.compressLog,
+            timestampsLog:  args.timestampsLog,
             branch:         args.branch,
         ])
         logger.debug('init', 'Set default logging level from config')
