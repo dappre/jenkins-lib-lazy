@@ -58,16 +58,17 @@ def releaseBranch = 'stable'
 
 // Initialize configuration
 lazyConfig(
-	name: 		'jenkins-lib-lazy',
-	env: 		[
-		RELEASE: false,
-		DRYRUN: false,
+	name: 		   'jenkins-lib-lazy',
+	env: 		   [
+		RELEASE:   false,
+		DRYRUN:    false,
 		BUILD_DIR: 'target',
-		GIT_CRED: 'bot-ci-dgm-rsa',
+		GIT_CRED:  'bot-ci-dgm-rsa',
 	],
-	inLabels:   [ 'ubuntu-16', 'centos-7' ],
-	onLabels:   [ default: 'linux', docker: 'docker', ],
-	noIndex:	"(${releaseBranch}|.+_.+)",	// Avoid automatic indexing for release and private branches
+	inLabels:      [ 'ubuntu-16', 'centos-7' ],
+	onLabels:      [ default: 'linux', docker: 'docker', ],
+	noIndex:	   "(${releaseBranch}|.+_.+)",	// Avoid automatic indexing for release and private branches
+	timestampsLog: true,
 )
 
 lazyStage {
@@ -93,7 +94,7 @@ lazyStage {
 		],
 		[
 			pre: { echo "Test pre docker step" }, 
-			run: { echo "Test step inside docker" },
+			run: 'main.sh',
 			post: { echo 'Test post docker step' },
 			in: '*', on: 'docker'
 		],
