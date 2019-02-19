@@ -22,7 +22,7 @@
 // Load Jenkins shared libraries common to all projects
 def libLazy = [
 	remote:			'https://github.com/digital-me/jenkins-lib-lazy.git',
-	branch:			'stable',
+	branch:			env.BRANCH_NAME,
 	credentialsId:	null,
 ]
 
