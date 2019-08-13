@@ -82,7 +82,9 @@ def call(stage, index, task, inLabel = null) {
                 } catch (e) {
                     error e.toString()
                 } finally {
-                    step([$class: 'WsCleanup'])
+                    if (config.cleanWorspace) {
+                        step([$class: 'WsCleanup'])
+                    }
                 }
                 logger.info('Finished')
             }
