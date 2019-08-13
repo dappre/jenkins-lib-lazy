@@ -73,7 +73,7 @@ Most of wich will be available as parameters if the Job is manually triggered
 ```groovy
 lazyStage {
     name = '<stage_name>'
-    tasks = [ run: { step1(<args>); ... }, on: '<node_label>', ]
+    tasks = [ run: { step1(<args>); ... }, on: [ '<node_label>',] , ]
 }
 ```
 
@@ -84,8 +84,8 @@ It is possible to pass a List of task rather than a single Map:
 lazyStage {
     name = '<stage_name>'
     tasks = [
-        [ run: { step1(<args>); ... }, on: '<node_label1>', ]
-        [ run: { step2(<args>); ... }, on: '<node_label2>', ]
+        [ run: { step1(<args>); ... }, on: [ '<node_label1>', ], ]
+        [ run: { step2(<args>); ... }, on: [ '<node_label2>', ], ]
         ...
     ]
 }
@@ -96,7 +96,7 @@ It is possible to pass a List of script (or a single ono as a String) rather tha
 ```groovy
 lazyStage {
     name = '<stage_name>'
-    tasks = [ run: [ '<script>', ... ], on: '<node_label>', ]
+    tasks = [ run: [ '<script>', ... ], on: [ '<node_label>', ], ]
     ]
 }
 ```
