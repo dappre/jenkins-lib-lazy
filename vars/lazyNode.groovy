@@ -42,6 +42,7 @@ def call(stage, index, task, inLabel = null) {
             node(label: onLabel) {
                 logger.info('Started')
                 logger.trace("Env before = ${env.dump()}")
+				def msg = 'no error'
                 try {
                     logger.debug('Checkout SCM')
                     checkout scm
@@ -79,11 +80,18 @@ def call(stage, index, task, inLabel = null) {
 	                        }
 						}
                     }
+					currentBuild.result = Result.SUCCESS.toString()
                 } catch (e) {
-                    error e.toString()
+					currentBuild.result = Result.FAILURE.toString()
+					msg = e.toString()
+                    error msg
+					throw e
                 } finally {
-                    if (config.cleanWorspace) {
+                    if (config.cleanWorkspace) {
                         step([$class: 'WsCleanup'])
+                    }
+                    if (config.xmppTargets) {
+                        jabberNotify(targets: config.xmppTargets, extraMessage: "Stage ${stage} ended - ${msg}")
                     }
                 }
                 logger.info('Finished')
