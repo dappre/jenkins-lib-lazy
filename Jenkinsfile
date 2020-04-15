@@ -68,7 +68,6 @@ lazyConfig(
 	inLabels:      [ 'ubuntu-16', 'centos-7' ],
 	onLabels:      [ default: 'linux', docker: 'docker', ],
 	noIndex:	   "(${releaseBranch}|.+_.+)",	// Avoid automatic indexing for release and private branches
-	compressLog:   true,
 	timestampsLog: true,
 )
 
