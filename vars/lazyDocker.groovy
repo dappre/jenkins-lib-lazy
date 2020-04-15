@@ -29,7 +29,7 @@ def buildImage(stage, label, args = '', filename = 'Dockerfile') {
     logger.debug('buildImage', 'Retrieving config')
     def config = lazyConfig()
 
-	logger.debug('buildImage', 'Collect Dockerfile from repo or lib image')
+    logger.debug('buildImage', 'Collect Dockerfile from repo or lib image')
     def dstDockerfile = lazyRes(stage, [ filename, ], label)[0]
 
     logger.debug('buildImage', 'Get uid of current UID and GID to build docker image')
@@ -56,18 +56,46 @@ def call (stage, task, label, args = '') {
     logger.debug('Build the relevant Docker image')
     def imgDocker = buildImage(stage, label)
 
-    logger.debug('Run each shell scripts as task inside the Docker')
+    // Because of https://issues.jenkins-ci.org/browse/JENKINS-49076
+    // And related to https://issues.jenkins-ci.org/browse/JENKINS-54389
+    logger.debug('Extract missing environment variables - including PATH')
+    envList = []
+    envPath = ''
     imgDocker.inside(args) {
+        sh(returnStdout: true, script: "cat /proc/1/environ | tr '\\0' '\\n'").split('\n').each { envStr ->
+            if (envStr ==~ /^PATH=.+/) {
+                logger.debug("Extract PATH environment variable from container")
+                envPath = envStr
+                logger.trace("Variable ${envStr}")
+            } else if (envStr ==~ /^[^=]+=.*/) {
+                varName = envStr.split('=')[0]
+                logger.debug("Adding environment variable ${varName}")
+                envList << envStr
+                logger.trace("Variable ${envStr}")
+            } else {
+                varIndex = envList.size() - 1
+                varName = envList[varIndex].split('=')[0]
+                logger.debug("Appending more data to the environment variable ${varName}")
+                envList[varIndex] += '\n' + envStr
+                logger.trace("Variable ${envList[varIndex]}")
+            }
+        }
+    }
+
+    logger.debug('Run each shell scripts as task inside the Docker')
+    imgDocker.inside(args + " -e ${envPath}") {
+        withEnv(envList as List) {
         logger.debug("Calling each of the ${steps.size()} steps")
-        steps.each { step ->
-            logger.trace("Current step = ${step.toString()}")
-            if (config.timestampsLog) {
-                logger.debug('Enable timestamps for this step')
-                timestamps {
+            steps.each { step ->
+                logger.trace("Current step = ${step.toString()}")
+                if (config.timestampsLog) {
+                    logger.debug('Enable timestamps for this step')
+                    timestamps {
+                        step()
+                    }
+                } else {
                     step()
                 }
-            } else {
-                step()
             }
         }
     }
