@@ -3,13 +3,12 @@ FROM ubuntu:16.04
 
 # Install common requirements
 RUN apt-get -y update && \
-	  apt-get -y install \
+    apt-get -y install \
       git \
       wget \
       unzip \
-      which \
     && \
-	  apt-get clean
+    apt-get clean
 
 # Add user to build and package
 ARG uid=1000
