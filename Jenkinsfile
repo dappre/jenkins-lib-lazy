@@ -32,7 +32,7 @@ library(
 		$class:			'GitSCMSource',
 		remote:			libLazy.remote,
 		credentialsId:	libLazy.credentialsId
-	])
+	]),
     changelog: false,
 )
 
@@ -49,7 +49,7 @@ library(
 		$class:			'GitSCMSource',
 		remote:			libCustom.remote,
 		credentialsId:	libCustom.credentialsId
-	])
+	]),
     changelog: false,
 )
 
