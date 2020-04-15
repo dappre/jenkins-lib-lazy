@@ -1,0 +1,54 @@
+version: '3'
+services:
+  centos7:
+    build: 
+      context: lazyDir
+      dockerfile: centos7.Dockerfile
+      args:
+        uid: "${_UID:-1000}"
+        gid: "${_GID:-1000}"
+    volumes:
+      - .:/var/tmp/lazylib
+    working_dir: /var/tmp/lazylib
+    stdin_open: true
+    tty: true
+    hostname: lazylib-agent.local
+    container_name: lazylib-agent.local
+    command: bash
+    networks:
+      - bridge
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 256M
+    environment:
+      - LAZY_LABEL=centos7
+  ubuntu16:
+    build: 
+      context: lazyDir
+      dockerfile: ubuntu16.Dockerfile
+      args:
+        uid: "${_UID:-1000}"
+        gid: "${_GID:-1000}"
+    volumes:
+      - .:/var/tmp/lazylib
+    working_dir: /var/tmp/lazylib
+    stdin_open: true
+    tty: true
+    hostname: lazylib-agent.local
+    container_name: lazylib-agent.local
+    command: bash
+    networks:
+      - bridge
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 256M
+    environment:
+      - LAZY_LABEL=ubuntu16
+
+networks:
+  bridge:
+    external: true

@@ -67,7 +67,7 @@ lazyConfig(
 		BUILD_DIR: 'target',
 		GIT_CRED:  'bot-ci-dgm-rsa',
 	],
-	inLabels:      [ 'ubuntu-16', 'centos-7' ],
+	inLabels:      [ 'ubuntu16', 'centos7' ],
 	onLabels:      [ default: 'linux', docker: 'docker', ],
 	noIndex:	   "(${releaseBranch}|.+_.+)",	// Avoid automatic indexing for release and private branches
 	timestampsLog: true,
