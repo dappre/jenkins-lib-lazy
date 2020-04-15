@@ -33,6 +33,7 @@ library(
 		remote:			libLazy.remote,
 		credentialsId:	libLazy.credentialsId
 	])
+    changelog: false,
 )
 
 // Load Jenkins shared libraries to customize this project
@@ -49,6 +50,7 @@ library(
 		remote:			libCustom.remote,
 		credentialsId:	libCustom.credentialsId
 	])
+    changelog: false,
 )
 
 // Define the remotes and the working and deploy branches
