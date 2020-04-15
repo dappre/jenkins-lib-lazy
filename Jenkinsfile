@@ -60,7 +60,7 @@ def releaseBranch = 'stable'
 lazyConfig(
 	name: 		   'jenkins-lib-lazy',
 	env: 		   [
-		RELEASE:   false,
+		RELEASE:   true,
 		DRYRUN:    false,
 		BUILD_DIR: 'target',
 		GIT_CRED:  'bot-ci-dgm-rsa',
@@ -69,6 +69,7 @@ lazyConfig(
 	onLabels:      [ default: 'linux', docker: 'docker', ],
 	noIndex:	   "(${releaseBranch}|.+_.+)",	// Avoid automatic indexing for release and private branches
 	timestampsLog: true,
+	xmppTargets:   'devops@conference.qiy.nl',
 )
 
 lazyStage {
