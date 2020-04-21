@@ -67,7 +67,7 @@ def call (stage, task, label, args = '') {
                 logger.debug("Extract PATH environment variable from container")
                 envPath = envStr
                 logger.trace("Variable ${envStr}")
-            } else if (envStr ==~ /^[^=]+=.*/) {
+            } else if (envStr ==~ /^[^=\s]+=.*/) {
                 varName = envStr.split('=')[0]
                 logger.debug("Adding environment variable ${varName}")
                 envList << envStr
