@@ -58,11 +58,15 @@ def call (stage, task, label, args = '') {
 
     // Because of https://issues.jenkins-ci.org/browse/JENKINS-49076
     // And related to https://issues.jenkins-ci.org/browse/JENKINS-54389
-    logger.debug('Extract missing environment variables - including PATH')
     envList = []
     envPath = ''
+	logger.debug("Inspecting docker image to retrieve entrypoint")
+	entryPointStr = sh(returnStdout: true, script: "docker inspect -f '{{.ContainerConfig.Entrypoint}}' ${config.name}-${stage}-${label}:${config.branch}").trim()
+	entryPoint = entryPointStr.substring(1, entryPointStr.length()-1).split(',')
+	logger.trace("Entrypoint = ${entryPoint}")
+    logger.debug('Extract missing environment variables - including PATH')
     imgDocker.inside(args) {
-        sh(returnStdout: true, script: "cat /proc/1/environ | tr '\\0' '\\n'").split('\n').each { envStr ->
+        sh(returnStdout: true, script: "${entryPoint.join(' ')} env").split('\n').each { envStr ->
             if (envStr ==~ /^PATH=.+/) {
                 logger.debug("Extract PATH environment variable from container")
                 envPath = envStr
