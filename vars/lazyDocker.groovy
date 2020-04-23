@@ -64,30 +64,41 @@ def call (stage, task, label, args = '') {
 	entryPointStr = sh(returnStdout: true, script: "docker inspect -f '{{.ContainerConfig.Entrypoint}}' ${config.name}-${stage}-${label}:${config.branch}").trim()
 	entryPoint = entryPointStr.substring(1, entryPointStr.length()-1).split(',')
 	logger.trace("Entrypoint = ${entryPoint}")
-    logger.debug('Extract missing environment variables - including PATH')
+    logger.debug('Extract missing environment variables')
     imgDocker.inside(args) {
-        sh(returnStdout: true, script: "${entryPoint.join(' ')} env").split('\n').each { envStr ->
-            if (envStr ==~ /^PATH=.+/) {
-                logger.debug("Extract PATH environment variable from container")
-                envPath = envStr
-                logger.trace("Variable ${envStr}")
-            } else if (envStr ==~ /^[^=\s]+=.*/) {
-                varName = envStr.split('=')[0]
-                logger.debug("Adding environment variable ${varName}")
-                envList << envStr
-                logger.trace("Variable ${envStr}")
-            } else {
-                varIndex = envList.size() - 1
-                varName = envList[varIndex].split('=')[0]
-                logger.debug("Appending more data to the environment variable ${varName}")
-                envList[varIndex] += '\n' + envStr
-                logger.trace("Variable ${envList[varIndex]}")
-            }
+        envRaw = sh(returnStdout: true, script: "${entryPoint.join(' ')} env").trim()
+    }
+    logger.trace("Extracted environment variables =\n" + envRaw)
+    envArr = envRaw.split('\n')
+    logger.debug("Extracted ${envArr.size()} environment variables")
+    if (envArr.size()) envArr.each { envStr ->
+        logger.trace("Environment string to parse = ${envStr}")
+        if (envStr ==~ /^PATH=.+/) {
+            logger.debug("Extract PATH environment variable from container")
+            envPath = envStr
+            logger.trace("Variable ${envStr}")
+        } else if (envStr ==~ /^[^=\s]+=.*/) {
+            logger.debug("Adding a new environment variable")
+            varName = envStr.split('=')[0]
+            logger.trace("Adding environment variable ${envStr}")
+            envList << envStr
+        } else if (envList.size()) {
+            logger.debug("Appending more data to last environment variable")
+            varIndex = envList.size() - 1
+            varName = envList[varIndex].split('=')[0]
+            envList[varIndex] += '\n' + envStr
+            logger.trace("Updating environment variable ${envList[varIndex]}")
+        } else {
+            logger.warn("No clue what to do with this string: ${envStr}")
         }
+    }
+    if (envPath) {
+      logger.debug('Overwrite PATH from extract environment variables')
+      args += " -e ${envPath}"
     }
 
     logger.debug('Run each shell scripts as task inside the Docker')
-    imgDocker.inside(args + " -e ${envPath}") {
+    imgDocker.inside(args) {
         withEnv(envList as List) {
         logger.debug("Calling each of the ${steps.size()} steps")
             steps.each { step ->
