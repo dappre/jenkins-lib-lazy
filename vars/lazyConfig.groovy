@@ -138,7 +138,7 @@ def call(Map args = [:]) {
       forceTrigger:   env.LAZY_FORCETRIGGER ?: false,
       buildToKeep:    env.LAZY_BUILDTOKEEP ?: '5',
       compressLog:    env.LAZY_COMPRESSLOG ?: false,
-      timestampsLog:  env.LAZY_TIMESTAMPSLOG ?: false,
+      timestampsLog:  env.LAZY_TIMESTAMPSLOG ?: true,
       cleanWorkspace: env.LAZY_CLEANWORKSPACE ?: true,
       xmppTargets:    env.LAZY_XMPPTARGETS ?: false,
       branch:         env.BRANCH_NAME ?: env.LAZY_BRANCH ?: 'master',
