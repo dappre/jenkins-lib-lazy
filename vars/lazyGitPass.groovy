@@ -10,7 +10,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,14 +26,14 @@ import org.jenkins.ci.lazy.Logger
 
 // Provide username and password via GIT_ASKPASS
 def call(id, body = { sh 'git version' }, path = '.git_askpass.sh') {
-    if (! fileExists(path)) {
-        def content = libraryResource('org/jenkins/ci/lazy/git_askpass.sh')
-        writeFile(encoding: 'UTF-8', file: path, text: content)
-        sh("chmod +x ${path}")
+  if (! fileExists(path)) {
+    def content = libraryResource('org/jenkins/ci/lazy/git_askpass.sh')
+    writeFile(encoding: 'UTF-8', file: path, text: content)
+    sh("chmod +x ${path}")
+  }
+  withCredentials([usernamePassword([credentialsId: id, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'])]) {
+    withEnv(["GIT_ASKPASS=${env.WORKSPACE}/${path}"]) {
+      body()
     }
-    withCredentials([usernamePassword([credentialsId: id, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'])]) {
-        withEnv(["GIT_ASKPASS=${env.WORKSPACE}/${path}"]) {
-            body()
-        }
-    }
+  }
 }
