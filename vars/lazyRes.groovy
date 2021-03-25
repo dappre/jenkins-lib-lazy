@@ -26,60 +26,65 @@ import org.jenkins.ci.lazy.Logger
 
 // Function to extract a resource from different possible paths in the shared libs
 def libraryResource(ArrayList paths) {
-	logger.debug('libraryResource', 'Extract resource from shared lib')
-	def resContent = ''
-	for ( path in paths ) {
-		try {
-			logger.debug('libraryResource', "Looking for resource with path = ${path}")
-        	resContent = libraryResource(path)
-		    break
-		} catch (hudson.AbortException e) {
-			logger.debug('libraryResource', "Resource not found with path =  ${path}")
-		}
-	}
-	return  resContent
+  logger.debug('libraryResource', 'Extract resource from shared lib')
+  def resContent = ''
+  for ( path in paths ) {
+    try {
+      logger.debug('libraryResource', "Looking for resource with path = ${path}")
+        resContent = libraryResource(path)
+        break
+    } catch (hudson.AbortException e) {
+      logger.debug('libraryResource', "Resource not found with path =  ${path}")
+    }
+  }
+  return  resContent
 }
 
 // Function to prepare and list resources (copy from lib to workspace if needed)
 def call(stage, resources, label) {
-    logger.debug('Retrieving config')
-    def config = lazyConfig()
+  logger.debug('Retrieving config')
+  def config = lazyConfig()
 
-    def resList = []
+  def resList = []
 
-    logger.debug('Enter sub-folder where resources are located')
-    dir("${config.dir}") {
-        resources.each { res ->
-            def resDst = "${stage}/${res}"    // Default resource location
-            logger.debug('Lookup fo the relevant resource in sub workspace first')
-            // TODO: Rework to use fileExists?
-            def resSrc = sh(
-                returnStdout: true,
-                script: "ls -1 ${stage}/${label}.${res} 2> /dev/null || ls -1 ${stage}/${res} 2> /dev/null || ls -1 ${label}.${res} 2> /dev/null || ls -1 ${res} 2> /dev/null || echo"
-            ).trim()
+  logger.debug('Enter sub-folder where resources are located')
+  dir("${config.dir}") {
+    resources.each { res ->
+      def resDst = "${stage}/${res}"  // Default resource location
+      logger.debug('Lookup fo the relevant resource in sub workspace first')
+      // TODO: Rework to use fileExists?
+      def resSrc = sh(
+        returnStdout: true,
+        script: "ls -1 ${stage}/${label}.${res} 2> /dev/null || ls -1 ${stage}/${res} 2> /dev/null || ls -1 ${label}.${res} 2> /dev/null || ls -1 ${res} 2> /dev/null || echo"
+      ).trim()
 
-            if (resSrc != null && resSrc != '') {
-                logger.debug('Use resource from workspace since existing')
-                resDst = resSrc
-            } else {
-                logger.debug('Extract resource from shared lib')
-                def resContent = libraryResource([ "${config.dir}/${stage}/${label}.${res}", "${config.dir}/${stage}/${res}", "${config.dir}/${label}.${res}", "${config.dir}/${res}", ])
+      if (resSrc != null && resSrc != '') {
+        logger.debug('Use resource from workspace since existing')
+        resDst = resSrc
+      } else {
+        logger.debug('Extract resource from shared lib')
+        def resContent = libraryResource([
+          "${config.dir}/${stage}/${label}.${res}",
+          "${config.dir}/${stage}/${res}",
+          "${config.dir}/${label}.${res}",
+          "${config.dir}/${res}",
+        ])
 
-                logger.debug('Write the selected resource to workspace sub-folder')
-				logger.trace("Copy res = ${res} from library to resDst = ${resDst}")
-                writeFile(
-                    file: resDst,
-                    text: resContent
-                )
-            }
+        logger.debug('Write the selected resource to workspace sub-folder')
+        logger.trace("Copy res = ${res} from library to resDst = ${resDst}")
+        writeFile(
+          file: resDst,
+          text: resContent
+        )
+      }
 
-            logger.debug('Add the path to the resource in the final list to be returned')
-            logger.trace("Resource list content is now = ${resList.toString()}")
-            resList += resDst
-        }
+      logger.debug('Add the path to the resource in the final list to be returned')
+      logger.trace("Resource list content is now = ${resList.toString()}")
+      resList += resDst
     }
+  }
 
-    logger.trace("Found ${resList.size()} resources = ${resList}")
-    
-    return resList
+  logger.trace("Found ${resList.size()} resources = ${resList}")
+  
+  return resList
 }
