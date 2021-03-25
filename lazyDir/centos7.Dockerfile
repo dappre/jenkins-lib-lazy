@@ -17,36 +17,68 @@
 #  limitations under the License.
 #
 
+##############################
+# General level requirements #
+##############################
+
 # Pull base image from official repo
-FROM centos:centos7.8.2003
+FROM centos:centos7.9.2009
 
 # Import local GPG keys and enable epel repo
 RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7 && \
-    yum -q clean expire-cache && \
-    yum -q -y update && \
-    yum -y install --setopt=tsflags=nodocs epel-release && \
+    yum -q clean all && \
+    yum -q makecache && \
+    yum -y install --setopt=tsflags=nodocs \
+      epel-release \
+    && \
     rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7 && \
     yum -q -y clean all --enablerepo='*'
 
 # Install common requirements
-RUN yum -q clean expire-cache && \
-    yum -q -y update && \
-    yum -y install --setopt=tsflags=nodocs \
-      git \
-      wget \
-      unzip \
-      which \
-    && \
+RUN INSTALL_PKGS="git unzip wget which" && \
+    yum -q clean expire-cache && \
+    yum -q makecache && \
+    yum -y install --setopt=tsflags=nodocs $INSTALL_PKGS && \
+    rpm -V $INSTALL_PKGS && \
     yum -q -y clean all --enablerepo='*'
 
-# Add user to build and package
+# Prepare locales
+ARG locale=en_US.UTF-8
+ENV LANG "${locale}"
+ENV LC_ALL "${locale}"
+
+# Configure desired timezone
+ENV TZ=Europe/Amsterdam
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
+
+##################################
+# Application level requirements #
+##################################
+
+
+###########################
+# User level requirements #
+###########################
+
+# Parameters for default user:group
 ARG uid=1000
-ARG user=dummy
+ARG user=lazy
 ARG gid=1000
-ARG group=dummy
+ARG group=lazy
 
-RUN groupadd -g "${gid}" "${group}" && \
-    useradd -ms /bin/bash -g "${group}" -u "${uid}" "${user}"
+# Add or modify user and group for build and runtime (convenient)
+RUN id ${user} > /dev/null 2>&1 && \
+    { groupmod -g "${gid}" "${group}" && usermod -md /home/${user} -s /bin/bash -g "${group}" -u "${uid}" "${user}"; } || \
+    { groupadd -g "${gid}" "${group}" && useradd -md /home/${user} -s /bin/bash -g "${group}" -u "${uid}" "${user}"; }
 
-# Get script directory from lazyLib
+# Switch to non-root user
+USER ${user}
+WORKDIR /home/${user}
+
+# Prepare user variables
+ENV USER ${user}
+ENV HOME=/home/${user}
+
+# Define (unused) arguments (to avoid warning) 
 ARG dir=.

@@ -33,13 +33,13 @@ def toJson (List list) {
   def json = "[\n"
   list.eachWithIndex { it, i ->
     logger.trace('toJson/list', "${it} / index = ${i}")
-      json += "  \"${it}\""
-      if (i < (list.size() - 1) ) {
-        json += ",\n"
-      } else {
-        json += "\n]"
-      }
+    json += "  \"${it}\""
+    if (i < (list.size() - 1) ) {
+      json += ",\n"
+    } else {
+      json += "\n]"
     }
+  }
   return json
 }
 
